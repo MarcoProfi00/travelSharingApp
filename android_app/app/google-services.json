@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "52459642476",
+    "project_id": "stable-argon-460408-t6",
+    "storage_bucket": "stable-argon-460408-t6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:52459642476:android:f33164ae6853a8e8ee8249",
+        "android_client_info": {
+          "package_name": "com.example.ToTravel"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "52459642476-v54s9at8u0nhjaerda54651be2bhdt8n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ToTravel",
+            "certificate_hash": "c45976e2fefd663187b1fb77c04eabc4c38303d9"
+          }
+        },
+        {
+          "client_id": "52459642476-vlflvkpq5dfrh7jt4204v27p61blbnr6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxlcjvPPJs1N1QbjXQHdk69yAmT9-lUjk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "52459642476-94u3f73onb8vrvdbq6g24dn3dckti0c3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
