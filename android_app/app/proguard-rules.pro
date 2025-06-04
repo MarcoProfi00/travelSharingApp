@@ -5,17 +5,17 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep class for location to not show warning when building
+-keep class com.google.android.gms.internal.location.zze { *; }
+-keep class com.google.android.gms.internal.location.zze$* { *; }
+-keepclassmembers class com.google.android.gms.internal.location.zze$* { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+-dontwarn com.google.android.gms.internal.location.zze
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Keep all public constructors of classes extending ViewModel.
+-keep public class * extends androidx.lifecycle.ViewModel {
+    public <init>(...);
+}
+
+# Keep all classes and their members in the data model package
+-keep class com.example.travelsharingapp.data.model.** { *; }

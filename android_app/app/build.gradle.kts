@@ -1,12 +1,30 @@
+import java.util.Properties
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+
+val secretsFile = rootProject.file("secrets.properties")
+val secretsProperties = Properties()
+
+if (secretsFile.exists()) {
+    try {
+        FileInputStream(secretsFile).use { fis ->
+            secretsProperties.load(fis)
+        }
+    } catch (_: FileNotFoundException) {
+        project.logger.warn("Keystore properties file not found at ${secretsFile.absolutePath}.")
+    } catch (e: Exception) {
+        project.logger.error("Error loading keystore properties file: ${e.message}")
+    }
+} else {
+    project.logger.warn("Keystore properties file not found at ${secretsFile.absolutePath}.")
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 
-    // For Maps secrets
     id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
-
-    // For Firebase connection
     id("com.google.gms.google-services")
 }
 
@@ -24,12 +42,22 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        manifestPlaceholders["MAPS_API_KEY"] = project.findProperty("MAPS_API_KEY") ?: ""
     }
 
+    signingConfigs {
+        create("release") {
+            if (secretsFile.exists() && secretsProperties.getProperty("RELEASE_STORE_FILE") != null) {
+                storeFile = file(secretsProperties.getProperty("RELEASE_STORE_FILE"))
+                storePassword = secretsProperties.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias = secretsProperties.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword = secretsProperties.getProperty("RELEASE_KEY_PASSWORD")
+            } else {
+                project.logger.warn("Release signing config in build.gradle.kts is not fully set up due to missing secrets.properties.")
+            }
+        }
+    }
     buildTypes {
-        release {
+        getByName("release") {
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
@@ -37,6 +65,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
 
         debug {
@@ -93,7 +122,6 @@ dependencies {
     implementation (libs.accompanist.systemuicontroller)
 
     implementation(platform(libs.firebase.bom))
-
     implementation(libs.firebase.analytics)
 
     implementation(libs.firebase.auth)
@@ -106,7 +134,6 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
     implementation(libs.firebase.database)
-
     implementation(libs.firebase.messaging.ktx)
 
     implementation(libs.integrity)
@@ -114,6 +141,8 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.material3.window.size.class1.android)
+    implementation(libs.androidx.window)
+    implementation(libs.androidx.window.core)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -3,6 +3,7 @@ package com.example.travelsharingapp.ui.screens.main
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -75,6 +76,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import com.example.travelsharingapp.BuildConfig
 import com.example.travelsharingapp.data.repository.NotificationRepository
 import com.example.travelsharingapp.data.repository.ThemeRepository
 import com.example.travelsharingapp.data.repository.TravelApplicationRepository
@@ -126,6 +128,8 @@ import com.example.travelsharingapp.ui.screens.user_review.UserReviewListScreen
 import com.example.travelsharingapp.ui.screens.user_review.UserReviewViewModel
 import com.example.travelsharingapp.ui.screens.user_review.UserReviewViewModelFactory
 import com.example.travelsharingapp.ui.theme.TravelProposalTheme
+import com.example.travelsharingapp.utils.LockScreenOrientation
+import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.firebase.auth.FirebaseAuth
@@ -246,10 +250,11 @@ class MainActivity : ComponentActivity() {
 
         val placesClient = Places.createClient(this)
 
-        // Keep screen ON
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        enableEdgeToEdge()
+        if (BuildConfig.DEBUG) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
 
+        enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
             val themeViewModel: ThemeViewModel = viewModel(
@@ -331,6 +336,10 @@ fun AppContent(
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
+
+    // Lock screen on non-tablet devices
+    if(!shouldUseTabletLayout())
+        LockScreenOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
 
     val userProfileRepo = UserRepository()
     val authViewModel: AuthViewModel = viewModel(
