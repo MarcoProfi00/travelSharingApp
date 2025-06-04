@@ -317,7 +317,6 @@ fun ProfileHeaderSection(
                 )
             )
 
-
             RatingStars(rating = rating)
         }
     }

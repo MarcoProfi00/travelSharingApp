@@ -29,6 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -103,15 +104,23 @@ fun UserReviewAllScreen(
         }
     }
 
-    LaunchedEffect(proposalId, userId) {
+    LaunchedEffect(proposalId, userId, proposalState.value) {
+        val currentProposal = proposalState.value
+
+        if (currentProposal == null) {
+            return@LaunchedEffect
+        }
+
         userReviewViewModel.observeReviewsForProposal(proposalId)
         val ids = applicationViewModel.getAcceptedParticipants(proposalId, userId)
         companions.clear()
 
         // first companion is owner
-        if (proposalState.value!!.organizerId != userId) {
-            val organizer = userProfileViewModel.getOrFetchUserProfileById(proposalState.value!!.organizerId)
-            companions.add(0, organizer!!)
+        if (currentProposal.organizerId != userId) {
+            val organizer = userProfileViewModel.getOrFetchUserProfileById(currentProposal.organizerId)
+            organizer?.let {
+                companions.add(0, it)
+            }
         }
 
         val fetchedCompanions = ids.mapNotNull { companionId ->
@@ -137,20 +146,19 @@ fun UserReviewAllScreen(
         )
     }
 
-    if (companions.isEmpty()) {
-        Box(
+    if (proposalState.value == null || companions.isEmpty()) {
+        Column(
             modifier = modifier
                 .fillMaxSize()
                 .padding(16.dp),
-            contentAlignment = Alignment.Center
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                "No companions to review for this trip yet.",
-                modifier = Modifier.padding(16.dp)
-            )
+            CircularProgressIndicator()
+            Text("Loading trip participants...")
         }
-    } else {
-        if (isTabletInLandscape && currentUser != null) {
+    } else if (currentUser != null) {
+        if (isTabletInLandscape) {
             Row(modifier = modifier.fillMaxSize().padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                 LazyColumn(
                     modifier = Modifier
@@ -201,7 +209,7 @@ fun UserReviewAllScreen(
                     }
                 }
             }
-        } else if (currentUser != null) {
+        } else {
             LazyColumn(
                 modifier = modifier
                     .fillMaxSize()
@@ -223,10 +231,17 @@ fun UserReviewAllScreen(
                     )
                 }
             }
-        } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Loading user data...")
-            }
+        }
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator()
+            Text("Loading user data...")
         }
     }
 }

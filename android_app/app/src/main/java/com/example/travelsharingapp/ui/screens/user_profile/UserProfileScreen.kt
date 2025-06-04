@@ -3,6 +3,7 @@ package com.example.travelsharingapp.ui.screens.user_profile
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.net.Uri
+import androidx.annotation.FloatRange
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -62,8 +63,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -71,6 +76,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -107,7 +114,6 @@ fun UserProfileScreen(
         userViewModel.visualizeUserProfile(userId)
         userReviewViewModel.loadReviewsForUser(userId)
     }
-
 
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
@@ -302,20 +308,62 @@ fun UserInfoSection(
 
 
 @Composable
-fun RatingStars(rating: Float) {
+fun RatingStars(rating: Float = 5f) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.Center
     ) {
-        repeat(5) { index ->
-            val starColor = Color(0xFFFFD700) // Oro
-            if (rating >= index + 1) {
-                Icon(Icons.Filled.Star, modifier = Modifier.size(32.dp), contentDescription = "Full star", tint = starColor)
-            } else {
-                Icon(Icons.Filled.StarBorder, modifier = Modifier.size(32.dp), contentDescription = "Empty star", tint = starColor)
+        val starColor = Color(0xFFFFD700) // Gold
+        val maxStars = 5
+
+        repeat(maxStars) { index ->
+            val starValue = index + 1
+            Box(modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Filled.StarBorder,
+                    contentDescription = "Empty star",
+                    tint = starColor,
+                    modifier = Modifier.matchParentSize()
+                )
+
+                if (rating >= starValue) {
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "Full star",
+                        tint = starColor,
+                        modifier = Modifier.matchParentSize()
+                    )
+                } else if (rating > index && rating < starValue) {
+                    val fraction = rating - index
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = "Partial star",
+                        tint = starColor,
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(FractionalRectangleShape(0f, fraction))
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(4.dp))
         }
+    }
+}
+
+class FractionalRectangleShape(private val startFraction: Float, private val endFraction: Float) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density
+    ): Outline {
+        return Outline.Rectangle(
+            Rect(
+                left = size.width * startFraction,
+                top = 0f,
+                right = size.width * endFraction,
+                bottom = size.height
+            )
+        )
     }
 }
 
