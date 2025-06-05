@@ -84,10 +84,29 @@ fun UserReviewAllScreen(
     onNavigateToUserProfileInfo: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    val currentUser by userProfileViewModel.selectedUserProfile.collectAsState()
-    val proposalFromState by travelProposalViewModel.selectedProposal.collectAsState()
+    val observedUser by userProfileViewModel.selectedUserProfile.collectAsState()
+    val observedProposal by travelProposalViewModel.selectedProposal.collectAsState()
 
-    val reviews by userReviewViewModel.proposalReviews.collectAsState()
+    LaunchedEffect(proposalId) {
+        travelProposalViewModel.setDetailProposalId(proposalId)
+    }
+
+    if (observedProposal == null) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator()
+            Text("Loading essential review data...")
+        }
+        return
+    }
+
+    val currentUser = observedUser!!
+    val proposal = observedProposal!!
 
     var acceptedParticipantIds by remember { mutableStateOf<List<String>>(emptyList()) }
     var isLoadingAcceptedParticipantIds by remember { mutableStateOf(true) }
@@ -103,11 +122,10 @@ fun UserReviewAllScreen(
 
     LaunchedEffect(proposalId) {
         if (proposalId.isNotBlank()) {
-            travelProposalViewModel.loadProposalById(proposalId)
             userReviewViewModel.observeReviewsForProposal(proposalId)
         }
     }
-    val proposal = proposalFromState
+    val reviews by userReviewViewModel.proposalReviews.collectAsState()
 
     LaunchedEffect(proposalId, userId, applicationViewModel) {
         if (proposalId.isNotBlank() && userId.isNotBlank()) {
@@ -125,7 +143,7 @@ fun UserReviewAllScreen(
         }
     }
 
-    val organizerProfile: UserProfile? = proposal?.let { p ->
+    val organizerProfile: UserProfile? = proposal.let { p ->
         if (p.organizerId != userId) {
             userProfileViewModel.observeUserProfileById(p.organizerId).collectAsState().value
         } else {
@@ -144,7 +162,7 @@ fun UserReviewAllScreen(
         userId,
         isLoadingAcceptedParticipantIds
     ) {
-        if (isLoadingAcceptedParticipantIds || proposal == null) {
+        if (isLoadingAcceptedParticipantIds) {
             if (companions.isNotEmpty()) companions.clear()
             selectedCompanionForDetail = null
             selectedCompanionIndexForDetail = null
@@ -188,9 +206,8 @@ fun UserReviewAllScreen(
         }
     }
 
-    val isLoadingInitialData = proposal == null || currentUser == null
     val isPopulatingCompanions = isLoadingAcceptedParticipantIds ||
-            (proposal != null && proposal.organizerId != userId && organizerProfile == null && !acceptedParticipantIds.contains(proposal.organizerId)) ||
+            (proposal.organizerId != userId && organizerProfile == null && !acceptedParticipantIds.contains(proposal.organizerId)) ||
             (acceptedParticipantIds.isNotEmpty() && acceptedCompanionProfileStates.any { it == null })
 
 
@@ -206,7 +223,7 @@ fun UserReviewAllScreen(
         )
     }
 
-    if (isLoadingInitialData || isPopulatingCompanions) {
+    if (isPopulatingCompanions) {
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -217,7 +234,7 @@ fun UserReviewAllScreen(
             CircularProgressIndicator()
             Text("Loading trip details...")
         }
-    } else if (currentUser != null) {
+    } else {
         if (isTabletInLandscape) {
             Row(modifier = modifier.fillMaxSize().padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                 LazyColumn(
@@ -255,7 +272,7 @@ fun UserReviewAllScreen(
                                     userIndex = selectedCompanionIndexForDetail!!,
                                     companions = companions,
                                     reviews = reviews,
-                                    currentUser = currentUser!!,
+                                    currentUser = currentUser,
                                     userProfileViewModel = userProfileViewModel,
                                     userReviewViewModel = userReviewViewModel,
                                     onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
@@ -284,24 +301,13 @@ fun UserReviewAllScreen(
                         userIndex = index,
                         companions = companions,
                         reviews = reviews,
-                        currentUser = currentUser!!,
+                        currentUser = currentUser,
                         userProfileViewModel = userProfileViewModel,
                         userReviewViewModel = userReviewViewModel,
                         onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
                     )
                 }
             }
-        }
-    } else {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            CircularProgressIndicator()
-            Text("Loading user data...")
         }
     }
 }

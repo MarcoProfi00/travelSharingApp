@@ -130,16 +130,15 @@ fun TravelProposalInfoScreen(
 ) {
     val observedProposal by proposalViewModel.selectedProposal.collectAsState()
     val isLoadingProposal by proposalViewModel.isLoading.collectAsState()
+    val currentTargetId by proposalViewModel.currentDetailProposalId.collectAsState()
 
     LaunchedEffect(proposalId) {
         proposalViewModel.setDetailProposalId(proposalId)
     }
 
-    DisposableEffect(Unit) {
-         onDispose {
-             proposalViewModel.setDetailProposalId(null)
-         }
-     }
+    if (currentTargetId != proposalId) {
+        return
+    }
 
     if (isLoadingProposal && observedProposal == null) {
         Column(

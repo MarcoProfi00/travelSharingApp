@@ -33,7 +33,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
@@ -68,10 +67,35 @@ fun ApplicationManageAllScreen(
     onNavigateToUserProfileInfo: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    val refreshTrigger = remember { mutableIntStateOf(0) }
+    val observedProposal by proposalViewModel.selectedProposal.collectAsState()
 
+    val refreshTrigger = remember { mutableIntStateOf(0) }
     val allStatuses = ApplicationStatus.entries.map { it.name }
     val statusFilter = remember { allStatuses.toMutableStateList() }
+
+    LaunchedEffect(proposalId, refreshTrigger.intValue) {
+        proposalViewModel.setDetailProposalId(proposalId)
+    }
+
+    if (observedProposal == null) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator()
+            Text("Loading proposal data...")
+        }
+        return
+    }
+
+    val proposal = observedProposal!!
+
+    LaunchedEffect(proposalId, refreshTrigger.intValue) {
+        applicationViewModel.loadApplicationsForProposal(proposalId)
+    }
 
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
@@ -85,22 +109,6 @@ fun ApplicationManageAllScreen(
         )
     }
 
-    LaunchedEffect(proposalId, refreshTrigger.intValue) {
-        applicationViewModel.loadApplicationsForProposal(proposalId)
-    }
-
-    val proposalState = proposalViewModel.selectedProposal.collectAsState()
-
-    LaunchedEffect(proposalId, refreshTrigger.intValue) {
-        proposalViewModel.loadProposalById(proposalId)
-    }
-
-    val proposal = proposalState.value
-    if (proposal == null) {
-        // mostra caricamento o return
-        CircularProgressIndicator()
-        return
-    }
     val applicationsForProposalState = applicationViewModel.proposalSpecificApplications.collectAsState()
     val currentApplications = applicationsForProposalState.value
 
@@ -438,8 +446,34 @@ fun ParticipantsPreviewRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+
+    // Placeholder
     if (participants.isEmpty()) {
-        return
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.height(avatarSize)) {
+                repeat(maxVisible) { index ->
+                    val offsetX = (avatarSize.value * (1 - overlapFactor) * index).dp
+
+                    ProfileAvatar(
+                        imageSize = avatarSize,
+                        user = null,
+                        modifier = Modifier
+                            .offset(x = offsetX)
+                            .border(
+                                width = 1.5.dp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                shape = CircleShape
+                            )
+                    )
+                }
+            }
+        }
     }
 
     val displayParticipants = participants.take(maxVisible)

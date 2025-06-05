@@ -46,8 +46,6 @@ class UserReviewViewModel(
 
     }
 
-
-
     fun addReview(review: UserReview, callback: (UserProfile?) -> Unit) {
         viewModelScope.launch {
             val reviewer = userProfileRepository.getUserProfile(review.reviewerId)

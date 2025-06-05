@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,13 +64,27 @@ fun ApplicationAddNewScreen(
     onBack: () -> Unit
 ) {
     val userProfile by userViewModel.selectedUserProfile.collectAsState()
-    var currentProposal = travelProposalViewModel.selectedProposal.collectAsState()
+    val observedProposal by travelProposalViewModel.selectedProposal.collectAsState()
+
     var motivationMessage by remember { mutableStateOf("") }
     val guestApplicants = remember { mutableStateListOf<GuestApplicant>() }
 
-    // Carica la proposta da Firestore
     LaunchedEffect(proposalId) {
-        travelProposalViewModel.loadProposalById(proposalId)
+        travelProposalViewModel.setDetailProposalId(proposalId)
+    }
+
+    if (observedProposal == null) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator()
+            Text("Loading proposal data...")
+        }
+        return
     }
 
     LaunchedEffect(Unit) {
@@ -84,8 +99,8 @@ fun ApplicationAddNewScreen(
         )
     }
 
-    val currentUser = userProfile ?: return
-    val proposal = currentProposal.value ?: return
+    val currentUser = userProfile!!
+    val proposal = observedProposal!!
 
     val availableSlots = proposal.maxParticipants - proposal.participantsCount - 1
 

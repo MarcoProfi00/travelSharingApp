@@ -15,6 +15,7 @@ import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
@@ -37,7 +38,9 @@ class TravelProposalViewModel(
 
     private val _selectedProposal = MutableStateFlow<TravelProposal?>(null)
     val selectedProposal: StateFlow<TravelProposal?> = _selectedProposal
-    private var currentDetailProposalId: String? = null
+
+    private val _currentDetailProposalId = MutableStateFlow<String?>(null)
+    val currentDetailProposalId: StateFlow<String?> = _currentDetailProposalId.asStateFlow()
 
     val name = MutableStateFlow("")
     val startDate = MutableStateFlow<LocalDate?>(null)
@@ -454,11 +457,11 @@ class TravelProposalViewModel(
                 .collect { proposalsList ->
                     _allProposals.value = proposalsList
 
-                    currentDetailProposalId?.let { id ->
+                    _currentDetailProposalId.value.let { id ->
                         _selectedProposal.value = proposalsList.find { it.proposalId == id }
                     }
 
-                    if (proposalsList.isNotEmpty() || currentDetailProposalId == null) {
+                    if (proposalsList.isNotEmpty() || _currentDetailProposalId.value == null) {
                         _isLoading.value = false
                     }
                 }
@@ -485,21 +488,32 @@ class TravelProposalViewModel(
     }
 
     fun setDetailProposalId(proposalId: String?) {
-        currentDetailProposalId = proposalId
         if (proposalId == null) {
             _selectedProposal.value = null
+            _currentDetailProposalId.value = null
+            _isLoading.value = false
             return
         }
 
-        val foundProposal = _allProposals.value.find { it.proposalId == proposalId }
-        _selectedProposal.value = foundProposal
-
-        if (foundProposal == null && _allProposals.value.isEmpty()) {
-            _isLoading.value = true
+        if (_currentDetailProposalId.value == proposalId &&
+            _selectedProposal.value?.proposalId == proposalId &&
+            !_isLoading.value
+        ) {
+            return
         }
 
-        if (exploreListenerJob == null || !exploreListenerJob!!.isActive) {
-            startListeningAllProposals()
+        _currentDetailProposalId.value = proposalId
+
+        val foundProposal = _allProposals.value.find { it.proposalId == proposalId }
+        if (foundProposal != null) {
+            _selectedProposal.value = foundProposal
+            _isLoading.value = false
+        } else {
+            _selectedProposal.value = null
+            _isLoading.value = true
+            if (exploreListenerJob == null || !exploreListenerJob!!.isActive) {
+                startListeningAllProposals()
+            }
         }
     }
 

@@ -850,7 +850,9 @@ fun AppContent(
                             onNavigateToUserProfile = { userId ->
                                 navController.navigate(AppRoutes.userProfile(userId, isOwnProfile = false))
                             },
-                            onBack = { navController.popBackStack() }
+                            onBack = {
+                                navController.popBackStack()
+                            }
                         )
                     }
                 }
