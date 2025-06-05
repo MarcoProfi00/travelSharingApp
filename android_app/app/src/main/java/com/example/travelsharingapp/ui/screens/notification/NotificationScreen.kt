@@ -1,5 +1,6 @@
 package com.example.travelsharingapp.ui.screens.notification
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -41,7 +41,6 @@ fun NotificationScreen(
     topBarViewModel: TopBarViewModel,
     notificationsViewModel: NotificationViewModel,
     onNavigateToProposal: (String) -> Unit,
-    //onNavigateToUserProfile: (String) -> Unit,
     onNavigateToTravelReviews: (travelId: String) -> Unit,
     onNavigateToUserReviewsList: (userId: String) -> Unit,
     onNavigateToManageTravelApplications: (travelId: String) -> Unit,
@@ -66,42 +65,58 @@ fun NotificationScreen(
         )
     }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 80.dp)
-    ) {
-        items(notifications) { notification ->
-            NotificationItem(
-                notification = notification,
-                onCardClick = {
-                    if (!notification.read) {
-                        notificationsViewModel.markNotificationAsRead(currentUserId, notification.notificationId)
-                    }
+    if (notifications.isEmpty()) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("You have no new notifications")
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier
+                .fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 80.dp)
+        ) {
+            items (
+                count = notifications.size,
+                key = { index -> notifications[index].notificationId },
+                itemContent = { index ->
+                    val notification = notifications[index]
+                    NotificationItem(
+                        notification = notification,
+                        onCardClick = {
+                            if (!notification.read) {
+                                notificationsViewModel.markNotificationAsRead(currentUserId, notification.notificationId)
+                            }
 
-                    when (notification.type) {
-                        NotificationType.NEW_TRAVEL_REVIEW.key -> {
-                            notification.proposalId?.let { travelId ->
-                                onNavigateToTravelReviews(travelId)
+                            when (notification.type) {
+                                NotificationType.NEW_TRAVEL_REVIEW.key -> {
+                                    notification.proposalId?.let { travelId ->
+                                        onNavigateToTravelReviews(travelId)
+                                    }
+                                }
+                                NotificationType.NEW_USER_REVIEW.key -> {
+                                    onNavigateToUserReviewsList(currentUserId)
+                                }
+                                NotificationType.NEW_TRAVEL_APPLICATION.key -> {
+                                    notification.proposalId?.let { travelId ->
+                                        onNavigateToManageTravelApplications(travelId)
+                                    }
+                                }
+                                else -> {
+                                    if (notification.proposalId != null) {
+                                        onNavigateToProposal(notification.proposalId)
+                                    }
+                                }
                             }
+                        },
+                        onDeleteClick = {
+                            notificationsViewModel.deleteNotificationOnClick(currentUserId, notification.notificationId)
                         }
-                        NotificationType.NEW_USER_REVIEW.key -> {
-                            onNavigateToUserReviewsList(currentUserId)
-                        }
-                        NotificationType.NEW_TRAVEL_APPLICATION.key -> {
-                            notification.proposalId?.let { travelId ->
-                                onNavigateToManageTravelApplications(travelId)
-                            }
-                        }
-                        else -> {
-                            if (notification.proposalId != null) {
-                                onNavigateToProposal(notification.proposalId)
-                            }
-                        }
-                    }
-                },
-                onDeleteClick = {
-                    notificationsViewModel.deleteNotificationOnClick(currentUserId, notification.notificationId)
+                    )
                 }
             )
         }

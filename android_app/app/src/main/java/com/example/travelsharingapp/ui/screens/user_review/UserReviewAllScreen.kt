@@ -294,19 +294,25 @@ fun UserReviewAllScreen(
                 contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                itemsIndexed(companions) { index, companion ->
-                    ReviewCard(
-                        proposalId = proposalId,
-                        user = companion,
-                        userIndex = index,
-                        companions = companions,
-                        reviews = reviews,
-                        currentUser = currentUser,
-                        userProfileViewModel = userProfileViewModel,
-                        userReviewViewModel = userReviewViewModel,
-                        onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
-                    )
-                }
+                items (
+                    count = companions.size,
+                    key = { index -> companions[index].userId },
+                    itemContent = { index ->
+                        val companion = companions[index]
+                        ReviewCard(
+                            proposalId = proposalId,
+                            user = companion,
+                            userIndex = index,
+                            companions = companions,
+                            reviews = reviews,
+                            currentUser = currentUser,
+                            userProfileViewModel = userProfileViewModel,
+                            userReviewViewModel = userReviewViewModel,
+                            onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
+                        )
+
+                    }
+                )
             }
         }
     }

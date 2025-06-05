@@ -86,10 +86,10 @@ fun TravelProposalOwnedListScreen(
         }
     }
 
+    val ownedProposals by viewModel.ownedProposals.collectAsState()
     LaunchedEffect(userId) {
         viewModel.startListeningOwnedProposals(userId)
     }
-    val ownedProposals by viewModel.ownedProposals.collectAsState()
 
     val allStatuses = ProposalStatus.entries.map { it.name }
     val statusFilter = remember { allStatuses.toMutableStateList() }
@@ -116,7 +116,14 @@ fun TravelProposalOwnedListScreen(
             selectedStatuses = statusFilter
         )
 
-        if (filteredProposals.isEmpty()) {
+        if (ownedProposals.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("You have not created any proposal")
+            }
+        } else if (filteredProposals.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center

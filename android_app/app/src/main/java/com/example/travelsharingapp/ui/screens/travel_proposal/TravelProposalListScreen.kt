@@ -687,10 +687,8 @@ fun AdvancedFilterModal(
 
                     LazyColumn(
                         state = lazyListState,
-                        modifier = Modifier
-                            .fillMaxSize()
+                        modifier = Modifier.fillMaxSize()
                     ) {
-
                         // Destination filter
                         item {
                             FilterSection(
