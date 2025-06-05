@@ -974,12 +974,9 @@ fun AppContent(
                         userViewModel = userProfileViewModel,
                         userReviewViewModel = userReviewViewModel,
                         topBarViewModel = topBarViewModel,
-                        onNavigateToAllUserReviews = {
-                            navController.navigate(
-                                AppRoutes.userReviewsViewAllScreen(
-                                    userId
-                                )
-                            )
+                        onNavigateToAllUserReviews = { navController.navigate(AppRoutes.userReviewsViewAllScreen(userId)) },
+                        onNavigateToUserProfileInfo = { userId ->
+                            navController.navigate(AppRoutes.userProfile(userId, isOwnProfile = false))
                         },
                         onNavigateToNotifications = { navController.navigate(AppRoutes.NOTIFICATIONS) },
                         onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) }
@@ -1050,7 +1047,10 @@ fun AppContent(
                         userProfileViewModel = userProfileViewModel,
                         userReviewViewModel = userReviewViewModel,
                         topBarViewModel = topBarViewModel,
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onNavigateToUserProfileInfo = { userId ->
+                            navController.navigate(AppRoutes.userProfile(userId, isOwnProfile = false))
+                        }
                     )
                 }
 

@@ -1,5 +1,6 @@
 package com.example.travelsharingapp.ui.screens.user_review
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ fun UserReviewListScreen(
     userProfileViewModel: UserProfileViewModel,
     userReviewViewModel: UserReviewViewModel,
     topBarViewModel: TopBarViewModel,
+    onNavigateToUserProfileInfo: (String) -> Unit,
     onBack: () -> Unit
 ) {
 
@@ -65,7 +67,6 @@ fun UserReviewListScreen(
             actions = { /* No specific actions for this screen*/ }
         )
     }
-
 
     if (reviews.isEmpty()) {
         Box(
@@ -91,22 +92,6 @@ fun UserReviewListScreen(
                     val review = reviews[index]
                     val user by userProfileViewModel.observeUserProfileById(review.reviewerId).collectAsState()
 
-                    val fallbackUser = UserProfile(
-                        userId = review.reviewerId,
-                        firstName = review.reviewerFirstName,
-                        lastName = review.reviewerLastName,
-                        email = "",
-                        nickname = "",
-                        birthDate = null,
-                        phoneNumber = "",
-                        description = "",
-                        interests = emptyList(),
-                        desiredDestinations = emptyList(),
-                        profileImage = null,
-                        rating = 0f,
-                        numberOfReviews = 0
-                    )
-
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
@@ -118,7 +103,8 @@ fun UserReviewListScreen(
                         Row(modifier = Modifier.padding(16.dp)) {
                             ProfileAvatar(
                                 imageSize = 50.dp,
-                                user = user ?: fallbackUser
+                                user = user,
+                                onClick = { onNavigateToUserProfileInfo(review.reviewerId) }
                             )
 
                             Spacer(modifier = Modifier.width(12.dp))
@@ -127,7 +113,8 @@ fun UserReviewListScreen(
                                 Text(
                                     text = "${review.reviewerFirstName} ${review.reviewerLastName}",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
+                                    fontSize = 16.sp,
+                                    modifier = Modifier.clickable { onNavigateToUserProfileInfo(user!!.userId) }
                                 )
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {

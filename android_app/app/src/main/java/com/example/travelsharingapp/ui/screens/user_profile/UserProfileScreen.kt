@@ -95,6 +95,7 @@ fun UserProfileScreen(
     onNavigateToAllUserReviews: () -> Unit,
     onNavigateToNotifications: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToUserProfileInfo: (String) -> Unit,
     userViewModel: UserProfileViewModel,
     userReviewViewModel: UserReviewViewModel,
     topBarViewModel: TopBarViewModel
@@ -180,7 +181,8 @@ fun UserProfileScreen(
                         UserReviewPreviewSection(
                             reviews = reviews,
                             userViewModel = userViewModel,
-                            onViewAllClick = onNavigateToAllUserReviews
+                            onViewAllClick = onNavigateToAllUserReviews,
+                            onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
                         )
                     }
                 }
@@ -564,6 +566,7 @@ fun LabeledInfoCardItem(
 fun UserReviewPreviewSection(
     reviews: List<UserReview>,
     userViewModel: UserProfileViewModel,
+    onNavigateToUserProfileInfo: (String) -> Unit,
     onViewAllClick: () -> Unit
 ) {
     Column(
@@ -587,14 +590,16 @@ fun UserReviewPreviewSection(
 
                     ProfileAvatar(
                         imageSize = 50.dp,
-                        user = reviewerProfile
+                        user = reviewerProfile,
+                        onClick = { onNavigateToUserProfileInfo(review.reviewerId) }
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
                             text = "${review.reviewerFirstName} ${review.reviewerLastName}",
                             fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.clickable { onNavigateToUserProfileInfo(review.reviewerId) }
                         )
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
