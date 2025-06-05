@@ -478,11 +478,16 @@ fun ReviewCard(
                     Text("Your Rating:", fontSize = 14.sp, fontWeight = FontWeight.Medium)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         (1..5).forEach { starIndex ->
-                            IconButton(onClick = { reviewRating = starIndex.toFloat() }) {
+                            IconButton(
+                                onClick = { reviewRating = starIndex.toFloat() },
+                                enabled = existingReview == null || isEditingReview
+                            ) {
                                 Icon(
                                     imageVector = if (starIndex <= reviewRating) Icons.Filled.Star else Icons.Filled.StarBorder,
                                     contentDescription = "Rate $starIndex stars",
-                                    tint = if (starIndex <= reviewRating) Color(0xFFFFD700) else Color.Gray,
+                                    tint = if (starIndex <= reviewRating)
+                                            (if (existingReview == null || isEditingReview) Color(0xFFFFD700) else Color(0x80FFD700))
+                                            else Color.Gray,
                                     modifier = Modifier.size(32.dp)
                                 )
                             }
@@ -497,7 +502,8 @@ fun ReviewCard(
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Share your experience...") },
                         minLines = 1,
-                        maxLines = 3
+                        maxLines = 3,
+                        enabled = existingReview == null || isEditingReview
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
