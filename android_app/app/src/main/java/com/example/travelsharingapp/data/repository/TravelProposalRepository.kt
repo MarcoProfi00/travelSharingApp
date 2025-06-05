@@ -16,9 +16,33 @@ import java.util.UUID
 
 class TravelProposalRepository(private val context: Context) {
     private val db = FirebaseFirestore.getInstance()
-    private val collection = db.collection("travelProposals")
     private val storage = FirebaseStorage.getInstance()
+
+    private val collection = db.collection("travelProposals")
     private val applicationsCollection = db.collection("travel_applications")
+
+    fun observeAllProposals(): Flow<List<TravelProposal>> = callbackFlow {
+        val registration: ListenerRegistration = collection.addSnapshotListener { snapshot, error  ->
+            if (error != null) {
+                cancel("Snapshot error", error)
+                return@addSnapshotListener
+            }
+            trySend(snapshot?.toObjects(TravelProposal::class.java) ?: emptyList())
+        }
+        awaitClose { registration.remove() }
+    }
+
+    fun observeProposalById(proposalId: String): Flow<TravelProposal?> = callbackFlow {
+        val registration: ListenerRegistration = collection.document(proposalId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    cancel("Snapshot error for $proposalId", error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.toObject(TravelProposal::class.java))
+            }
+        awaitClose { registration.remove() }
+    }
 
     fun observeProposalsByOrganizer(organizerId: String): Flow<List<TravelProposal>> = callbackFlow {
         val registration: ListenerRegistration = collection
@@ -33,23 +57,6 @@ class TravelProposalRepository(private val context: Context) {
             }
 
         awaitClose { registration.remove() }
-    }
-
-    fun observeAllProposals(): Flow<List<TravelProposal>> = callbackFlow {
-        val reg = collection.addSnapshotListener { snap, err ->
-            if (err != null) {
-                cancel("Snapshot error", err)
-                return@addSnapshotListener
-            }
-            trySend(snap?.toObjects(TravelProposal::class.java) ?: emptyList())
-        }
-        awaitClose { reg.remove() }
-    }
-
-
-    suspend fun getAllProposals(): List<TravelProposal> {
-        val snapshot = collection.get().await()
-        return snapshot.toObjects(TravelProposal::class.java)
     }
 
     suspend fun getProposalById(id: String): TravelProposal? {

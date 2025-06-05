@@ -52,11 +52,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -126,15 +128,20 @@ fun TravelProposalInfoScreen(
     onNavigateToUserProfile: (String) -> Unit,
     onBack: () -> Unit,
 ) {
-    val proposalState = remember { mutableStateOf<TravelProposal?>(null) }
+    val observedProposal by proposalViewModel.selectedProposal.collectAsState()
+    val isLoadingProposal by proposalViewModel.isLoading.collectAsState()
 
     LaunchedEffect(proposalId) {
-        proposalViewModel.getProposalById(proposalId) {
-            proposalState.value = it
-        }
+        proposalViewModel.setDetailProposalId(proposalId)
     }
 
-    if (proposalState.value == null) {
+    DisposableEffect(Unit) {
+         onDispose {
+             proposalViewModel.setDetailProposalId(null)
+         }
+     }
+
+    if (isLoadingProposal && observedProposal == null) {
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -148,27 +155,71 @@ fun TravelProposalInfoScreen(
         return
     }
 
-    val proposal = proposalState.value!!
+    if (observedProposal == null) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Proposal not found or an error occurred.")
+            Button(onClick = onBack) { Text("Go Back") }
+        }
+        return
+    }
+
+    val proposal = observedProposal!!
     val isOwner = proposal.organizerId == userId
     val showDeleteDialog = remember { mutableStateOf(false) }
     val showWithdrawDialog = remember { mutableStateOf(false) }
 
-    val organizer = userViewModel.getUserProfileById(proposal.organizerId)
+    val organizer by userViewModel.observeUserProfileById(proposal.organizerId).collectAsState(initial = null)
     val applications by applicationViewModel.applications.collectAsState()
-    val acceptedParticipantsProfiles = remember { mutableStateListOf<UserProfile>() }
+    var acceptedParticipantIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isLoadingParticipantIds by remember { mutableStateOf(true) }
 
-    LaunchedEffect(key1 = proposalId, key2 = applications) {
-        val allAcceptedIds = applicationViewModel.getAcceptedParticipants(proposalId, userId)
-        val profiles = allAcceptedIds.mapNotNull { acceptedUserId ->
-            userViewModel.getOrFetchUserProfileById(acceptedUserId)
+    LaunchedEffect(proposal.proposalId, applications, userId) {
+        isLoadingParticipantIds = true
+        try {
+            val ids = applicationViewModel.getAcceptedParticipants(proposal.proposalId, userId)
+            acceptedParticipantIds = ids
+        } catch (_: Exception) {
+            acceptedParticipantIds = emptyList()
+        } finally {
+            isLoadingParticipantIds = false
         }
-        acceptedParticipantsProfiles.clear()
+    }
 
-        if (!isOwner) {
-            acceptedParticipantsProfiles.add(userViewModel.getOrFetchUserProfileById(proposal.organizerId)!!)
+    val participantProfileStates = acceptedParticipantIds.map { id ->
+        val profileFlow = remember(id) { userViewModel.observeUserProfileById(id) }
+        profileFlow.collectAsState()
+    }
+
+    val finalAcceptedParticipantsProfiles: List<UserProfile> by remember(
+        organizer,
+        participantProfileStates,
+        isOwner,
+        isLoadingParticipantIds
+    ) {
+        derivedStateOf {
+            if (isLoadingParticipantIds && acceptedParticipantIds.isEmpty()) {
+                emptyList()
+            } else {
+                val profiles = mutableListOf<UserProfile>()
+                if (!isOwner) {
+                    organizer?.let { orgProfile ->
+                        profiles.add(orgProfile)
+                    }
+                }
+                participantProfileStates.forEach { userProfileState ->
+                    userProfileState.value?.let { participantProfile ->
+                        profiles.add(participantProfile)
+                    }
+                }
+                profiles.distinctBy { it.userId }
+            }
         }
-
-        acceptedParticipantsProfiles.addAll(profiles)
     }
 
     val scrollState = rememberScrollState()
@@ -189,7 +240,7 @@ fun TravelProposalInfoScreen(
         reviewViewModel.loadReviewsForProposal(proposalId)
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(proposal) {
         topBarViewModel.setConfig(
             title = proposal.name,
             navigationIcon = {
@@ -218,8 +269,7 @@ fun TravelProposalInfoScreen(
     }
 
     val showParticipantsReviewRow = (proposal.statusEnum == ProposalStatus.Concluded &&
-        (isOwner || currentUserApplication?.statusEnum == ApplicationStatus.Accepted) &&
-        acceptedParticipantsProfiles.isNotEmpty()
+        (isOwner || currentUserApplication?.statusEnum == ApplicationStatus.Accepted)
     )
 
     val configuration = LocalConfiguration.current
@@ -266,7 +316,7 @@ fun TravelProposalInfoScreen(
 
                 if (showParticipantsReviewRow) {
                     ParticipantsPreviewRow(
-                        participants = acceptedParticipantsProfiles,
+                        participants = finalAcceptedParticipantsProfiles,
                         onClick = onNavigateToCompanionsReview
                     )
                 }
@@ -329,7 +379,7 @@ fun TravelProposalInfoScreen(
 
             if (showParticipantsReviewRow) {
                 ParticipantsPreviewRow(
-                    participants = acceptedParticipantsProfiles,
+                    participants = finalAcceptedParticipantsProfiles,
                     onClick = onNavigateToCompanionsReview,
                 )
             }

@@ -48,77 +48,33 @@ class UserProfileViewModel(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
-    // Show a success toast message
     private val _showToast = MutableSharedFlow<Boolean>()
     val showToastMessage = _showToast.asSharedFlow()
-
-    private val _userProfiles = MutableStateFlow<List<UserProfile>>(emptyList())
-    //val userProfiles: StateFlow<List<UserProfile>> = _userProfiles.asStateFlow()
 
     private val _selectedUserProfile = MutableStateFlow<UserProfile?>(null)
     val selectedUserProfile: StateFlow<UserProfile?> = _selectedUserProfile.asStateFlow()
 
-    private val _visualizedUserProfile = MutableStateFlow<UserProfile?>(null)
-    val visualizedUserProfile: StateFlow<UserProfile?> = _visualizedUserProfile.asStateFlow()
-
-    private val _uiState = MutableStateFlow(UserProfileUiState.Loading)
-    val uiState: StateFlow<UserProfileUiState> = _uiState.asStateFlow()
-
     private val listeners = mutableMapOf<String, ListenerRegistration>()
-    private val _observedProfiles = mutableMapOf<String, MutableStateFlow<UserProfile?>>()
-    val observedProfiles: Map<String, StateFlow<UserProfile?>> get() = _observedProfiles
+    private var selectedUserProfileListenerRegistration: ListenerRegistration? = null
 
+    private val _observedProfiles = mutableMapOf<String, MutableStateFlow<UserProfile?>>()
     private var originalUserProfile: UserProfile? = null
 
-    // EDITABLE FIELDS
     var editedFirstName by mutableStateOf("")
-        private set
-
     var editedLastName by mutableStateOf("")
-        private set
-
     var editedEmail by mutableStateOf("")
-        private set
-
     var editedNickname by mutableStateOf("")
-        private set
-
     var editedBirthDate by mutableStateOf<Timestamp?>(null)
-        private set
-
     var editedPhoneNumber by mutableStateOf("")
-        private set
-
     var editedDescription by mutableStateOf("")
-        private set
-
     var editedInterests = mutableStateListOf<String>()
-        private set
-
     var editedDesiredDestinations = mutableStateListOf<String>()
-        private set
-
     var editedProfileImageUri by mutableStateOf<Uri?>(null)
-        private set
 
     private val _validationErrors = MutableStateFlow<Map<EditableProfileField, String>>(emptyMap())
     val validationErrors: StateFlow<Map<EditableProfileField, String>> = _validationErrors.asStateFlow()
 
     private val _hasUnsavedChanges = MutableStateFlow(false)
-    //val hasUnsavedChanges: StateFlow<Boolean> = _hasUnsavedChanges.asStateFlow()
-
-    init {
-        loadUserProfiles()
-    }
-
-    fun loadUserProfiles() {
-        viewModelScope.launch {
-            val profiles = userRepository.getAllUserProfiles()
-            _userProfiles.value = profiles
-        }
-    }
-
-
 
     fun observeUserProfileById(userId: String): StateFlow<UserProfile?> {
         return _observedProfiles.getOrPut(userId) {
@@ -132,71 +88,82 @@ class UserProfileViewModel(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
+    fun clearUserSessionData() {
+        selectedUserProfileListenerRegistration?.remove()
+        selectedUserProfileListenerRegistration = null
+
         listeners.values.forEach { it.remove() }
         listeners.clear()
+
+        _observedProfiles.clear()
+
+        _selectedUserProfile.value = null
+        originalUserProfile = null
+        clearEditableFields()
     }
 
-
+    override fun onCleared() {
+        super.onCleared()
+        clearUserSessionData()
+    }
 
     fun refreshUserProfile(updatedProfile: UserProfile) {
-        _userProfiles.value = _userProfiles.value.map { userInList ->
-            if (userInList.userId == updatedProfile.userId) {
-                updatedProfile
-            } else {
-                userInList
-            }
-        }
-
         if (_selectedUserProfile.value?.userId == updatedProfile.userId) {
             _selectedUserProfile.value = updatedProfile
         }
-
-        if (_visualizedUserProfile.value?.userId == updatedProfile.userId) {
-            _visualizedUserProfile.value = updatedProfile
-        }
     }
-
-    fun visualizeUserProfile(userId: String) {
-        viewModelScope.launch {
-            _uiState.value = UserProfileUiState.Loading
-            val profile = userRepository.getUserProfile(userId)
-            if (profile != null) {
-                _visualizedUserProfile.value = profile
-                _uiState.value = UserProfileUiState.Loaded
-            } else {
-                _uiState.value = UserProfileUiState.Error
-            }
-        }
-    }
-
 
     fun selectUserProfile(userId: String) {
-        viewModelScope.launch {
-            val profile = userRepository.getUserProfile(userId)
-            _selectedUserProfile.value = profile
-            originalUserProfile = profile?.copy()
-            profile?.let {
-                editedFirstName = it.firstName
-                editedLastName = it.lastName
-                editedEmail = it.email
-                editedNickname = it.nickname
-                editedBirthDate = it.birthDate
-                editedPhoneNumber = it.phoneNumber
-                editedDescription = it.description
-                editedInterests.clear()
-                editedInterests.addAll(it.interests)
-                editedDesiredDestinations.clear()
-                editedDesiredDestinations.addAll(it.desiredDestinations)
-                editedProfileImageUri = it.profileImage?.toUri()
+        if (_selectedUserProfile.value?.userId == userId) {
+            return
+        }
 
-                _hasUnsavedChanges.value = false
-                _validationErrors.value = emptyMap()
+        selectedUserProfileListenerRegistration?.remove()
+        selectedUserProfileListenerRegistration = null
+
+        _selectedUserProfile.value = null
+        originalUserProfile = null
+        clearEditableFields()
+
+        selectedUserProfileListenerRegistration = userRepository.observeUserProfile(userId) { profile ->
+            _selectedUserProfile.value = profile
+            if (originalUserProfile?.userId != profile?.userId || (originalUserProfile == null)) {
+                originalUserProfile = profile?.copy()
+                profile?.let {
+                    editedFirstName = it.firstName
+                    editedLastName = it.lastName
+                    editedEmail = it.email
+                    editedNickname = it.nickname
+                    editedBirthDate = it.birthDate
+                    editedPhoneNumber = it.phoneNumber
+                    editedDescription = it.description
+                    editedInterests.clear(); editedInterests.addAll(it.interests)
+                    editedDesiredDestinations.clear(); editedDesiredDestinations.addAll(it.desiredDestinations)
+                    editedProfileImageUri = it.profileImage?.toUri()
+                    _hasUnsavedChanges.value = false
+                    _validationErrors.value = emptyMap()
+                } ?: run {
+                    clearEditableFields()
+                    originalUserProfile = null
+                }
             }
         }
     }
 
+    private fun clearEditableFields() {
+        editedFirstName = ""
+        editedLastName = ""
+        editedEmail = ""
+        editedNickname = ""
+        editedBirthDate = null
+        editedPhoneNumber = ""
+        editedDescription = ""
+        editedInterests.clear()
+        editedDesiredDestinations.clear()
+        editedProfileImageUri = null
+        _hasUnsavedChanges.value = false
+        _validationErrors.value = emptyMap()
+    }
 
     fun updateFirstName(firstName: String) {
         editedFirstName = firstName
@@ -222,7 +189,6 @@ class UserProfileViewModel(
         editedBirthDate = birthDateMillis?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate().toTimestamp() }
         _hasUnsavedChanges.value = originalUserProfile?.birthDate != editedBirthDate
     }
-
 
     fun updatePhoneNumber(phoneNumber: String) {
         editedPhoneNumber = phoneNumber
@@ -260,12 +226,9 @@ class UserProfileViewModel(
         _hasUnsavedChanges.value = (originalUserProfile?.desiredDestinations != editedDesiredDestinations)
     }
 
-    //carica immagine sul db
     fun updateProfileImageUri(uri: Uri, context: Context) {
-
         viewModelScope.launch {
             val userId = _selectedUserProfile.value?.userId ?: return@launch
-
             val contentResolver = context.contentResolver
             val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
             val extension = when (mimeType) {
@@ -291,7 +254,6 @@ class UserProfileViewModel(
         }
     }
 
-    // VALIDATE ALL FIELDS
     fun validateFields(): Boolean {
         val errors = mutableMapOf<EditableProfileField, String>()
 
@@ -339,9 +301,7 @@ class UserProfileViewModel(
         if (!_hasUnsavedChanges.value && !imageChanged && !favoritesChanged)
             return true
 
-
         _validationErrors.value = emptyMap()
-
         if (!validateFields()) return false
 
         val updatedProfile = currentSelectedProfile.copy(
@@ -366,23 +326,7 @@ class UserProfileViewModel(
                 _showToast.emit(true)
             }
         }
-
         return true
-    }
-
-
-    fun getUserProfileById(userId: String): UserProfile? {
-        return _userProfiles.value.find { it.userId == userId }
-    }
-
-    suspend fun getOrFetchUserProfileById(userId: String): UserProfile? {
-        return getUserProfileById(userId) ?: run {
-            val fetched = userRepository.getUserProfile(userId)
-            if (fetched != null) {
-                _userProfiles.value = _userProfiles.value + fetched
-            }
-            fetched
-        }
     }
 
     fun addFavorite(proposalId: String) {
@@ -392,7 +336,6 @@ class UserProfileViewModel(
                 userRepository.addFavorite(currentUserId, proposalId)
                 val updatedProfile = userRepository.getUserProfile(currentUserId)
                 if (updatedProfile != null) {
-                    _selectedUserProfile.value = updatedProfile
                     refreshUserProfile(updatedProfile)
                 }
             }
@@ -406,7 +349,6 @@ class UserProfileViewModel(
                 userRepository.removeFavorite(currentUserId, proposalId)
                 val updatedProfile = userRepository.getUserProfile(currentUserId)
                 if (updatedProfile != null) {
-                    _selectedUserProfile.value = updatedProfile
                     refreshUserProfile(updatedProfile)
                 }
             }

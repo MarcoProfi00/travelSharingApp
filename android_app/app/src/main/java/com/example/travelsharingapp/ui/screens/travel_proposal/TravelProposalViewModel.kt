@@ -60,16 +60,11 @@ class TravelProposalViewModel(
     val allProposals: StateFlow<List<TravelProposal>> = _allProposals
 
     private val _creationSuccess = MutableStateFlow(false)
-    val creationSuccess: StateFlow<Boolean> = _creationSuccess
-
-    val typologyFilter = MutableStateFlow<String?>(null)
-
-    private val _filteredProposals = MutableStateFlow<List<TravelProposal>>(emptyList())
-    val filteredProposals: StateFlow<List<TravelProposal>> = _filteredProposals
+    //val creationSuccess: StateFlow<Boolean> = _creationSuccess
 
     private val _selectedProposal = MutableStateFlow<TravelProposal?>(null)
     val selectedProposal: StateFlow<TravelProposal?> = _selectedProposal
-
+    private var currentDetailProposalId: String? = null
 
     private var ownedListenerJob: Job? = null
     private var exploreListenerJob: Job? = null
@@ -292,7 +287,6 @@ class TravelProposalViewModel(
         }
     }
 
-
     fun deleteProposal(proposalId: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -313,16 +307,6 @@ class TravelProposalViewModel(
             repository.removeProposalById(proposalId)
 
             _ownedProposals.value = _ownedProposals.value.filterNot { it.proposalId == proposalId }
-            _isLoading.value = false
-        }
-    }
-
-    fun loadAllProposals() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val proposals = repository.getAllProposals()
-            _allProposals.value = proposals
-            applyFilters()
             _isLoading.value = false
         }
     }
@@ -445,20 +429,6 @@ class TravelProposalViewModel(
     private val _ownedProposals = MutableStateFlow<List<TravelProposal>>(emptyList())
     val ownedProposals: StateFlow<List<TravelProposal>> = _ownedProposals
 
-    fun setTypologyFilter(filter: String?) {
-        typologyFilter.value = filter
-        applyFilters()
-    }
-
-    private fun applyFilters() {
-        val currentFilter = typologyFilter.value
-        _filteredProposals.value = if (currentFilter.isNullOrBlank()) {
-            _allProposals.value
-        } else {
-            _allProposals.value.filter { it.typology.equals(currentFilter, ignoreCase = true) }
-        }
-    }
-
     fun startListeningProposals(userId: String) {
         ownedListenerJob?.cancel()
         ownedListenerJob = viewModelScope.launch {
@@ -470,25 +440,54 @@ class TravelProposalViewModel(
     }
 
     fun startListeningAllProposals() {
+        if (exploreListenerJob?.isActive == true) {
+            return
+        }
+
         exploreListenerJob?.cancel()
+        _isLoading.value = true
+
         exploreListenerJob = viewModelScope.launch {
             repository.observeAllProposals()
-                .collect { list ->
-                    _allProposals.value = list
-                    applyFilters()
+                .collect { proposalsList ->
+                    _allProposals.value = proposalsList
+
+                    currentDetailProposalId?.let { id ->
+                        _selectedProposal.value = proposalsList.find { it.proposalId == id }
+                    }
+
+                    if (proposalsList.isNotEmpty() || currentDetailProposalId == null) {
+                        _isLoading.value = false
+                    }
                 }
         }
     }
 
+    fun setDetailProposalId(proposalId: String?) {
+        currentDetailProposalId = proposalId
+        if (proposalId == null) {
+            _selectedProposal.value = null
+            return
+        }
+
+        val foundProposal = _allProposals.value.find { it.proposalId == proposalId }
+        _selectedProposal.value = foundProposal
+
+        if (foundProposal == null && _allProposals.value.isEmpty()) {
+            _isLoading.value = true
+        }
+
+        if (exploreListenerJob == null || !exploreListenerJob!!.isActive) {
+            startListeningAllProposals()
+        }
+    }
 
     override fun onCleared() {
+        super.onCleared()
         exploreListenerJob?.cancel()
         ownedListenerJob?.cancel()
-        super.onCleared()
     }
 }
-
-
 
 sealed class TravelImage {
     data class UriImage(val uri: String) : TravelImage()

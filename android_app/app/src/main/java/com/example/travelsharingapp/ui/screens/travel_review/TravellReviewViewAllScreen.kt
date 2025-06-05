@@ -90,10 +90,6 @@ fun TravelReviewViewAllScreen(
     LaunchedEffect(proposalId) {
         travelProposalViewModel.loadProposalById(proposalId)
         reviewViewModel.observeReviews(proposalId)
-
-        if (userProfileViewModel.selectedUserProfile.value == null) {
-            userProfileViewModel.selectUserProfile(userId)
-        }
     }
 
     val showDeleteDialog = remember { mutableStateOf(false) }

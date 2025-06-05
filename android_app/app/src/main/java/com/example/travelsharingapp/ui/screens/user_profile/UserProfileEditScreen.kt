@@ -40,7 +40,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -97,7 +96,6 @@ fun UserProfileEditScreen(
     val context = LocalContext.current
 
     val userProfile by userViewModel.selectedUserProfile.collectAsState()
-    val uiState by userViewModel.uiState.collectAsState()
     val editedBirthDate = userViewModel.editedBirthDate
         ?.toLocalDate()
         ?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) ?: ""
@@ -141,93 +139,72 @@ fun UserProfileEditScreen(
     }
 
     BackHandler(onBack = onBack)
-
-    when (uiState) {
-        UserProfileUiState.Loading -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+    when (configuration.orientation) {
+        Configuration.ORIENTATION_LANDSCAPE -> {
+            Row(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
             ) {
-                CircularProgressIndicator()
-            }
-        }
-
-        UserProfileUiState.Error -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Error loading profile")
-            }
-        }
-
-        UserProfileUiState.Loaded -> {
-            when (configuration.orientation) {
-                Configuration.ORIENTATION_LANDSCAPE -> {
-                    Row(
-                        modifier = modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(0.3f)
-                                .padding(end = 16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            ProfileHeaderSection(
-                                firstName = userProfile?.firstName ?: "",
-                                lastName = userProfile?.lastName ?: "",
-                                originalImageUri = userProfile?.profileImage,
-                                pendingImageUri = userViewModel.editedProfileImageUri,
-                                rating = userProfile?.rating ?: 0.0f,
-                                isImageEditable = true,
-                                onEditImageClick = { showImageSourceDialog = true },
-                                isEditing = true
-                            )
-                        }
-
-                        EditableFieldsSection(
-                            userViewModel = userViewModel,
-                            validationErrors = validationErrors,
-                            editedBirthDate = editedBirthDate,
-                            onShowDatePicker = { showDatePicker = true },
-                            modifier = Modifier
-                                .weight(0.7f)
-                                .imePadding()
-                                .verticalScroll(scrollState)
-                                .padding(start = 16.dp)
-                        )
-                    }
+                Column(
+                    modifier = Modifier
+                        .weight(0.3f)
+                        .padding(end = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ProfileHeaderSection(
+                        firstName = userProfile?.firstName ?: "",
+                        lastName = userProfile?.lastName ?: "",
+                        originalImageUri = userProfile?.profileImage,
+                        pendingImageUri = userViewModel.editedProfileImageUri,
+                        rating = userProfile?.rating ?: 0.0f,
+                        isImageEditable = true,
+                        onEditImageClick = { showImageSourceDialog = true },
+                        isEditing = true
+                    )
                 }
-                else -> {
-                    Column(modifier = modifier
-                        .fillMaxSize()
+
+                EditableFieldsSection(
+                    userViewModel = userViewModel,
+                    validationErrors = validationErrors,
+                    editedBirthDate = editedBirthDate,
+                    onShowDatePicker = { showDatePicker = true },
+                    modifier = Modifier
+                        .weight(0.7f)
+                        .imePadding()
                         .verticalScroll(scrollState)
-                        .padding(16.dp)
-                        .imePadding(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        ProfileHeaderSection(
-                            firstName = userProfile?.firstName ?: "",
-                            lastName = userProfile?.lastName ?: "",
-                            originalImageUri = userProfile?.profileImage,
-                            pendingImageUri = userViewModel.editedProfileImageUri,
-                            rating = userProfile?.rating ?: 0.0f,
-                            isImageEditable = true,
-                            onEditImageClick = { showImageSourceDialog = true },
-                            isEditing = true
-                        )
+                        .padding(start = 16.dp)
+                )
+            }
+        }
 
-                        EditableFieldsSection(
-                            userViewModel = userViewModel,
-                            validationErrors = validationErrors,
-                            editedBirthDate = editedBirthDate,
-                            onShowDatePicker = { showDatePicker = true },
-                        )
-                    }
-                }
+        else -> {
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(16.dp)
+                    .imePadding(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                ProfileHeaderSection(
+                    firstName = userProfile?.firstName ?: "",
+                    lastName = userProfile?.lastName ?: "",
+                    originalImageUri = userProfile?.profileImage,
+                    pendingImageUri = userViewModel.editedProfileImageUri,
+                    rating = userProfile?.rating ?: 0.0f,
+                    isImageEditable = true,
+                    onEditImageClick = { showImageSourceDialog = true },
+                    isEditing = true
+                )
+
+                EditableFieldsSection(
+                    userViewModel = userViewModel,
+                    validationErrors = validationErrors,
+                    editedBirthDate = editedBirthDate,
+                    onShowDatePicker = { showDatePicker = true },
+                )
             }
         }
     }

@@ -104,7 +104,6 @@ import com.example.travelsharingapp.ui.screens.travel_application.ApplicationAdd
 import com.example.travelsharingapp.ui.screens.travel_application.ApplicationManageAllScreen
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModelFactory
-import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalFavoriteListScreen
 import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalInfoScreen
 import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalJoinedScreen
 import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalListScreen
@@ -151,6 +150,8 @@ object AppRoutes {
     const val SETTINGS = "settings"
     const val INITIAL_PROFILE_SETUP = "initialProfileSetup"
 
+    const val CHAT = "chat"
+
     const val CHANGE_PASSWORD = "changePassword"
     const val RESET_PASSWORD = "resetPassword"
     const val MANAGE_PASSKEYS = "managePasskeys"
@@ -162,7 +163,6 @@ object AppRoutes {
     const val TRAVEL_PROPOSAL_DUPLICATE = "travelProposalDuplicate/{proposalId}"
     const val TRAVEL_PROPOSAL_NEW = "travelProposalNew"
     const val TRAVEL_PROPOSAL_OWN = "travelProposalOwn"
-    const val TRAVEL_PROPOSAL_FAVORITES = "travelProposalFavorites"
     const val TRAVEL_PROPOSAL_JOINED = "joinedProposals"
     const val TRAVEL_PROPOSAL_APPLY = "travelProposalApply/{proposalId}"
     const val TRAVEL_PROPOSAL_USER_REVIEWS = "travelProposalUserReviews/{proposalId}"
@@ -659,7 +659,7 @@ fun AppContent(
                                         popUpTo(navController.graph.findNode(AppRoutes.INITIAL_PROFILE_SETUP + "/{userId}/{email}")!!.id) { inclusive = true }
                                     }
                                 }
-                                authViewModel.signOut(context)
+                                authViewModel.signOut(userProfileViewModel, context)
                             }
                         )
                     } else {
@@ -700,7 +700,7 @@ fun AppContent(
                         onNavigateToChangePassword = { navController.navigate(AppRoutes.CHANGE_PASSWORD) },
                         onNavigateToDeleteAccount = { navController.navigate(AppRoutes.DELETE_ACCOUNT) },
                         onNavigateToEditAccount = { navController.navigate(AppRoutes.EDIT_PROFILE) },
-                        onLogout = { authViewModel.signOut(context) },
+                        onLogout = { authViewModel.signOut(userProfileViewModel, context) },
                         onBack = { navController.popBackStack() }
                     )
                 }
@@ -719,6 +719,7 @@ fun AppContent(
                         modifier = Modifier.padding(innerPadding),
                         topBarViewModel = topBarViewModel,
                         authViewModel = authViewModel,
+                        userProfileViewModel = userProfileViewModel,
                         onAccountDeletedSuccessfully = { navController.navigate(AppRoutes.LOGIN) },
                         onBack = { navController.popBackStack() }
                     )
@@ -801,8 +802,8 @@ fun AppContent(
                             userViewModel = userProfileViewModel,
                             proposalViewModel = travelProposalViewModel,
                             topBarViewModel = topBarViewModel,
-                            onNavigateToFavorites = {
-                                navController.navigate(AppRoutes.TRAVEL_PROPOSAL_FAVORITES)
+                            onNavigateToChat = {
+                                navController.navigate(AppRoutes.CHAT)
                             },
                             onNavigateToTravelProposalInfo = { proposalId ->
                                 navController.navigate(AppRoutes.travelProposalInfo(proposalId))
@@ -928,29 +929,9 @@ fun AppContent(
                     }
                 }
 
-                //Travel Proposal Favorites
-                composable(AppRoutes.TRAVEL_PROPOSAL_FAVORITES) {
-                    currentUser?.let {
-                        TravelProposalFavoriteListScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            userId = currentUser.uid,
-                            applicationViewModel = travelApplicationViewModel,
-                            userViewModel = userProfileViewModel,
-                            proposalViewModel = travelProposalViewModel,
-                            topBarViewModel = topBarViewModel,
-                            onNavigateToTravelProposalInfo = { proposalId ->
-                                navController.navigate(
-                                    AppRoutes.travelProposalInfo(proposalId)
-                                )
-                            },
-                            onNavigateToTravelProposalEdit = { proposalId ->
-                                navController.navigate(
-                                    AppRoutes.travelProposalEdit(proposalId)
-                                )
-                            },
-                            onBack = { navController.popBackStack() }
-                        )
-                    }
+                // APP CHAT
+                composable(AppRoutes.CHAT) {
+                    TODO("Chat screen not implemented yet")
                 }
 
                 //Manage Applications
@@ -1005,12 +986,14 @@ fun AppContent(
 
                 //Edit Profile
                 composable(AppRoutes.EDIT_PROFILE) {
-                    UserProfileEditScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        userViewModel = userProfileViewModel,
-                        topBarViewModel = topBarViewModel,
-                        onBack = { if (userProfileViewModel.saveProfile()) navController.popBackStack() }
-                    )
+                    currentUser?.let {
+                        UserProfileEditScreen(
+                            modifier = Modifier.padding(innerPadding),
+                            userViewModel = userProfileViewModel,
+                            topBarViewModel = topBarViewModel,
+                            onBack = { if (userProfileViewModel.saveProfile()) navController.popBackStack() }
+                        )
+                    }
                 }
 
                 //Joined Travel Proposals

@@ -39,6 +39,7 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.filled.BeachAccess
 import androidx.compose.material.icons.filled.Book
@@ -157,7 +158,7 @@ fun TravelProposalListScreen(
     proposalViewModel: TravelProposalViewModel,
     applicationViewModel: TravelApplicationViewModel,
     topBarViewModel: TopBarViewModel,
-    onNavigateToFavorites: () -> Unit,
+    onNavigateToChat: () -> Unit,
     onNavigateToTravelProposalInfo: (String) -> Unit,
     onNavigateToTravelProposalEdit: (String) -> Unit
 ) {
@@ -184,26 +185,37 @@ fun TravelProposalListScreen(
 
     val isTablet = shouldUseTabletLayout()
 
-    val isLoading by proposalViewModel.isLoading.collectAsState()
+    val proposalsAreLoading by proposalViewModel.isLoading.collectAsState()
     LaunchedEffect(Unit) {
         proposalViewModel.startListeningAllProposals()
-    }
-
-    val allProposals by proposalViewModel.filteredProposals.collectAsState()
-
-    val filteredProposals = remember(allProposals) {
-        allProposals.filter {
-            it.organizerId != userId &&
-                    it.status != "Concluded"
-        }
-    }
-
-    LaunchedEffect(userId) {
         userViewModel.selectUserProfile(userId)
     }
 
+    val allProposals by proposalViewModel.allProposals.collectAsState()
     val userProfile by userViewModel.selectedUserProfile.collectAsState()
+
+    if (proposalsAreLoading || userProfile == null) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator()
+            Text("Loading proposals...",
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+        return
+    }
+
+    val filteredProposals = remember(allProposals) {
+        allProposals.filter { it.organizerId != userId && it.status != "Concluded" }
+    }
+
     val favorites: List<String> = remember(userProfile) { userProfile?.favoriteProposals ?: emptyList() }
+    var showOnlyFavorites by remember { mutableStateOf(false) }
 
     val textFieldState = remember { TextFieldState() }
     val searchResults = remember(filteredProposals, textFieldState.text) {
@@ -222,16 +234,25 @@ fun TravelProposalListScreen(
         applyMainFilters,
         applyAdvancedFilters,
         textFieldState.text,
-        filterTrigger
+        filterTrigger,
+        experienceTypologyFilter,
+        showOnlyFavorites,
+        favorites
     ) {
-        val proposalList = if (textFieldState.text.toString().isNotBlank()) {
+        val baseList = if (textFieldState.text.toString().isNotBlank()) {
             searchResults
         } else {
             filteredProposals
         }
 
+        val favoritesFilteredList = if (showOnlyFavorites) {
+            baseList.filter { proposal -> favorites.contains(proposal.proposalId) }
+        } else {
+            baseList
+        }
+
         if (applyMainFilters || applyAdvancedFilters) {
-            proposalList.filter { proposal ->
+            favoritesFilteredList.filter { proposal ->
                 val typologyMatch = experienceTypologyFilter.isEmpty() ||
                         experienceTypologyFilter.any { it.equals(proposal.typology, ignoreCase = true) }
 
@@ -263,7 +284,7 @@ fun TravelProposalListScreen(
                         startDateMatch && endDateMatch && durationMatch && participantsMatch
             }
         } else {
-            proposalList
+            favoritesFilteredList
         }
     }
 
@@ -287,8 +308,8 @@ fun TravelProposalListScreen(
             title = "All Travel Proposals",
             navigationIcon = { /* nothing */ },
             actions = {
-                IconButton(onClick = { onNavigateToFavorites() }) {
-                    Icon(Icons.Default.FavoriteBorder, contentDescription = "Favorites")
+                IconButton(onClick = { onNavigateToChat() }) {
+                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "Chat")
                 }
             },
             floatingActionButton = { /* nothing */ }
@@ -308,22 +329,16 @@ fun TravelProposalListScreen(
                         .padding(horizontal = 16.dp)
                         .padding(top = searchBarHeight)
                 ) {
-                    if (isLoading) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
-                        }
-                    } else {
-                        TravelProposalLazyList(
-                            travelProposalList = filteredTravelProposalList,
-                            numGridCells = if (isTablet) 4 else 3,
-                            favorites = favorites,
-                            userId = userId,
-                            applicationViewModel = applicationViewModel,
-                            userProfileViewModel = userViewModel,
-                            onNavigateToTravelProposalInfo = onNavigateToTravelProposalInfo,
-                            onNavigateToTravelProposalEdit = onNavigateToTravelProposalEdit
-                        )
-                    }
+                    TravelProposalLazyList(
+                        travelProposalList = filteredTravelProposalList,
+                        numGridCells = if (isTablet) 4 else 3,
+                        favorites = favorites,
+                        userId = userId,
+                        applicationViewModel = applicationViewModel,
+                        userProfileViewModel = userViewModel,
+                        onNavigateToTravelProposalInfo = onNavigateToTravelProposalInfo,
+                        onNavigateToTravelProposalEdit = onNavigateToTravelProposalEdit
+                    )
                 }
 
                 Row(
@@ -348,6 +363,17 @@ fun TravelProposalListScreen(
                         )
                     )
 
+                    IconToggleButton(
+                        checked = showOnlyFavorites,
+                        onCheckedChange = { showOnlyFavorites = it }
+                    ) {
+                        Icon(
+                            imageVector = if (showOnlyFavorites) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = "Filter Favorites",
+                            tint = if (showOnlyFavorites) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
                     TravelProposalListFilters(
                         selectedFilters = experienceTypologyFilter
                             .mapNotNull { it.toTypologyOrNull() }
@@ -359,7 +385,6 @@ fun TravelProposalListScreen(
                                 experienceTypologyFilter.remove(filter.name)
                             }
                             applyMainFilters = experienceTypologyFilter.isNotEmpty()
-                            proposalViewModel.setTypologyFilter(experienceTypologyFilter.firstOrNull())
                         }
                     )
                 }
@@ -429,6 +454,17 @@ fun TravelProposalListScreen(
                             )
                         )
 
+                        IconToggleButton(
+                            checked = showOnlyFavorites,
+                            onCheckedChange = { showOnlyFavorites = it }
+                        ) {
+                            Icon(
+                                imageVector = if (showOnlyFavorites) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                contentDescription = "Filter Favorites",
+                                tint = if (showOnlyFavorites) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
                         TravelProposalListFilters(
                             selectedFilters = experienceTypologyFilter
                                 .mapNotNull { it.toTypologyOrNull() }
@@ -440,27 +476,20 @@ fun TravelProposalListScreen(
                                     experienceTypologyFilter.remove(filter.name)
                                 }
                                 applyMainFilters = experienceTypologyFilter.isNotEmpty()
-                                proposalViewModel.setTypologyFilter(experienceTypologyFilter.firstOrNull())
                             }
                         )
                     }
 
-                    if (isLoading) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
-                        }
-                    } else {
-                        TravelProposalLazyList(
-                            travelProposalList = filteredTravelProposalList,
-                            numGridCells = if(isTablet) 3 else 2,
-                            favorites = favorites,
-                            userId = userId,
-                            applicationViewModel = applicationViewModel,
-                            userProfileViewModel = userViewModel,
-                            onNavigateToTravelProposalInfo = onNavigateToTravelProposalInfo,
-                            onNavigateToTravelProposalEdit = onNavigateToTravelProposalEdit
-                        )
-                    }
+                    TravelProposalLazyList(
+                        travelProposalList = filteredTravelProposalList,
+                        numGridCells = if(isTablet) 3 else 2,
+                        favorites = favorites,
+                        userId = userId,
+                        applicationViewModel = applicationViewModel,
+                        userProfileViewModel = userViewModel,
+                        onNavigateToTravelProposalInfo = onNavigateToTravelProposalInfo,
+                        onNavigateToTravelProposalEdit = onNavigateToTravelProposalEdit
+                    )
                 }
 
                 // Over all the other content but under the search bar

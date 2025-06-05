@@ -89,12 +89,10 @@ fun ApplicationManageAllScreen(
         applicationViewModel.loadApplicationsForProposal(proposalId)
     }
 
-    val proposalState = remember { mutableStateOf<TravelProposal?>(null) }
+    val proposalState = proposalViewModel.selectedProposal.collectAsState()
 
     LaunchedEffect(proposalId, refreshTrigger.intValue) {
-        proposalViewModel.getProposalById(proposalId) { result ->
-            proposalState.value = result
-        }
+        proposalViewModel.loadProposalById(proposalId)
     }
 
     val proposal = proposalState.value
@@ -388,10 +386,12 @@ fun ApplicationCard(
 @Composable
 fun ProfileAvatar(
     imageSize: Dp,
-    user: UserProfile,
+    user: UserProfile?,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
+
+    if (user == null) return
 
     val imageModel: Any? = user.profileImage?.takeIf { it.isNotBlank() }
     val showUserInitials = imageModel == null

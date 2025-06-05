@@ -3,7 +3,6 @@ package com.example.travelsharingapp.ui.screens.user_profile
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.net.Uri
-import androidx.annotation.FloatRange
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -57,9 +56,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -104,14 +101,10 @@ fun UserProfileScreen(
     topBarViewModel: TopBarViewModel
 ) {
     val configuration = LocalConfiguration.current
-
-    val userProfile by userViewModel.visualizedUserProfile.collectAsState()
+    val userProfile by userViewModel.observeUserProfileById(userId).collectAsState(initial = null)
     val reviews by userReviewViewModel.userReviews.collectAsState()
-    val uiState by userViewModel.uiState.collectAsState()
-
 
     LaunchedEffect(userId) {
-        userViewModel.visualizeUserProfile(userId)
         userReviewViewModel.loadReviewsForUser(userId)
     }
 
@@ -133,106 +126,70 @@ fun UserProfileScreen(
         )
     }
 
-    when (uiState) {
-        UserProfileUiState.Loading -> {
-            Column(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                CircularProgressIndicator()
-                Text("Loading user profile...")
-            }
-        }
-
-        UserProfileUiState.Error -> {
-            Column(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Something went wrong retrieving user profile info")
-            }
-        }
-
-        UserProfileUiState.Loaded -> {
-            userProfile?.let { profile ->
-                when (configuration.orientation) {
-                    Configuration.ORIENTATION_LANDSCAPE -> {
-                        Row(
-                            modifier = modifier
-                                .fillMaxSize()
-                                .padding(16.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .weight(0.3f)
-                                    .padding(end = 16.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                ProfileHeaderSection(
-                                    firstName = profile.firstName,
-                                    lastName = profile.lastName,
-                                    originalImageUri = profile.profileImage,
-                                    rating = profile.rating
-                                )
-                            }
-
-                            UserInfoSection(
-                                userProfile = profile,
-                                modifier = Modifier
-                                    .weight(0.7f)
-                                    .imePadding()
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(start = 16.dp)
-                            )
-                        }
+    userProfile?.let { profile ->
+        when (configuration.orientation) {
+            Configuration.ORIENTATION_LANDSCAPE -> {
+                Row(
+                    modifier = modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .weight(0.3f)
+                            .padding(end = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        ProfileHeaderSection(
+                            firstName = profile.firstName,
+                            lastName = profile.lastName,
+                            originalImageUri = profile.profileImage,
+                            rating = profile.rating
+                        )
                     }
-                    else -> {
-                        Column(
-                            modifier = modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState())
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            ProfileHeaderSection(
-                                firstName = profile.firstName,
-                                lastName = profile.lastName,
-                                originalImageUri = profile.profileImage,
-                                rating = profile.rating
-                            )
 
-                            UserInfoSection(userProfile = profile)
+                    UserInfoSection(
+                        userProfile = profile,
+                        modifier = Modifier
+                            .weight(0.7f)
+                            .imePadding()
+                            .verticalScroll(rememberScrollState())
+                            .padding(start = 16.dp)
+                    )
+                }
+            }
+            else -> {
+                Column(
+                    modifier = modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ProfileHeaderSection(
+                        firstName = profile.firstName,
+                        lastName = profile.lastName,
+                        originalImageUri = profile.profileImage,
+                        rating = profile.rating
+                    )
 
-                            if (reviews.isNotEmpty()) {
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                                UserReviewPreviewSection(
-                                    reviews = reviews,
-                                    userViewModel = userViewModel,
-                                    onViewAllClick = onNavigateToAllUserReviews
-                                )
-                            }
-                        }
+                    UserInfoSection(userProfile = profile)
+
+                    if (reviews.isNotEmpty()) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        UserReviewPreviewSection(
+                            reviews = reviews,
+                            userViewModel = userViewModel,
+                            onViewAllClick = onNavigateToAllUserReviews
+                        )
                     }
                 }
             }
         }
-    } ?: Column(modifier = modifier
-        .fillMaxSize()
-        .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(16.dp))
+    } ?: run {
         CircularProgressIndicator()
-        Text("Something went wrong retrieving user profile info")
-        Spacer(modifier = Modifier.height(16.dp))
+        Text("Loading user profile...")
     }
 }
 
@@ -617,65 +574,44 @@ fun UserReviewPreviewSection(
         Text("Reviews received", style = MaterialTheme.typography.titleMedium)
 
         reviews.take(2).forEach { review ->
-            var reviewerProfile by remember { mutableStateOf<UserProfile?>(null) }
+            val reviewerProfile by userViewModel.observeUserProfileById(review.reviewerId).collectAsState()
 
-            LaunchedEffect(review.reviewerId) {
-                reviewerProfile = userViewModel.getOrFetchUserProfileById(review.reviewerId)
-            }
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
+                elevation = CardDefaults.cardElevation(2.dp)
+            ) {
+                Row(modifier = Modifier.padding(16.dp)) {
 
-            if (reviewerProfile != null) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
-                    elevation = CardDefaults.cardElevation(2.dp)
-                ) {
-                    Row(modifier = Modifier.padding(16.dp)) {
-
-                        ProfileAvatar(
-                            imageSize = 50.dp,
-                            user = reviewerProfile!!
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "${review.reviewerFirstName} ${review.reviewerLastName}",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                repeat(5) { i ->
-                                    val tint = if (i < review.rating) Color(0xFFFFD700) else Color.LightGray
-                                    Icon(
-                                        imageVector = Icons.Default.Star,
-                                        contentDescription = null,
-                                        tint = tint,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = review.comment)
-                        }
-                    }
-                }
-            } else {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    ),
-                    elevation = CardDefaults.cardElevation(2.dp)
-                ) {
-                    Row(modifier = Modifier.padding(16.dp)) {
+                    ProfileAvatar(
+                        imageSize = 50.dp,
+                        user = reviewerProfile
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
                         Text(
-                            text = "Reviewer info unavailable",
-                            style = MaterialTheme.typography.bodyMedium
+                            text = "${review.reviewerFirstName} ${review.reviewerLastName}",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
                         )
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            repeat(5) { i ->
+                                val tint = if (i < review.rating) Color(0xFFFFD700) else Color.LightGray
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = tint,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = review.comment)
                     }
                 }
             }

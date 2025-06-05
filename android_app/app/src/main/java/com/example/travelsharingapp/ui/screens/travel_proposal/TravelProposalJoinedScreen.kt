@@ -77,7 +77,6 @@ fun TravelProposalJoinedScreen(
 
     LaunchedEffect(userId) {
         travelApplicationViewModel.loadApplicationsForUser(userId)
-        travelProposalViewModel.loadAllProposals()
     }
 
     val joinedApplications by travelApplicationViewModel.userSpecificApplications.collectAsState()

@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.example.travelsharingapp.ui.screens.authentication.AccountDeleteState
 import com.example.travelsharingapp.ui.screens.authentication.AuthViewModel
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
+import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 
@@ -54,6 +55,7 @@ fun DeleteAccountScreen(
     modifier: Modifier = Modifier,
     topBarViewModel: TopBarViewModel,
     authViewModel: AuthViewModel,
+    userProfileViewModel: UserProfileViewModel,
     onAccountDeletedSuccessfully: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -189,7 +191,7 @@ fun DeleteAccountScreen(
                         Button(
                             onClick = {
                                 showConfirmationDialog = false
-                                authViewModel.deleteCurrentUserAccount(currentPassword, context)
+                                authViewModel.deleteCurrentUserAccount(userProfileViewModel, currentPassword, context)
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                         ) {

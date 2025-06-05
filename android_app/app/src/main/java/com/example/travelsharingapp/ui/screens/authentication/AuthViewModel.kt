@@ -21,6 +21,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.travelsharingapp.data.repository.AuthPreferenceKeys
 import com.example.travelsharingapp.data.repository.UserRepository
 import com.example.travelsharingapp.data.repository.dataStoreInstance
+import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
 import com.example.travelsharingapp.utils.FcmTokenManager
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -534,7 +535,7 @@ class AuthViewModel(
             }
     }
 
-    fun signOut(context: Context) {
+    fun signOut(userProfileViewModel: UserProfileViewModel,context: Context) {
         val userIdToSignOut = firebaseAuth.currentUser?.uid
 
         if (userIdToSignOut != null) {
@@ -544,6 +545,8 @@ class AuthViewModel(
         } else {
             performFirebaseSignOut(context, null, true)
         }
+
+        userProfileViewModel.clearUserSessionData()
     }
 
     private fun performFirebaseSignOut(context: Context, signedOutUserId: String?, tokenWasHandled: Boolean) {
@@ -619,7 +622,7 @@ class AuthViewModel(
         _passwordChangeState.value = PasswordChangeState.Idle
     }
 
-    fun deleteCurrentUserAccount(currentPassword: String, context: Context) {
+    fun deleteCurrentUserAccount(userProfileViewModel: UserProfileViewModel, currentPassword: String, context: Context) {
         _accountDeleteState.value = AccountDeleteState.Loading
         val user = firebaseAuth.currentUser
 
@@ -640,7 +643,7 @@ class AuthViewModel(
                     user.delete()
                         .addOnCompleteListener { deleteTask ->
                             if (deleteTask.isSuccessful) {
-                                signOut(context)
+                                signOut(userProfileViewModel, context)
                                 _accountDeleteState.value = AccountDeleteState.Success("Account deleted successfully.")
                             } else {
                                 if (deleteTask.exception is FirebaseAuthRecentLoginRequiredException) {

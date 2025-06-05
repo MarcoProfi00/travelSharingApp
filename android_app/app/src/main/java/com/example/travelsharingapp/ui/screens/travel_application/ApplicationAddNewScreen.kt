@@ -63,15 +63,13 @@ fun ApplicationAddNewScreen(
     onBack: () -> Unit
 ) {
     val userProfile by userViewModel.selectedUserProfile.collectAsState()
-    var currentProposal by remember { mutableStateOf<TravelProposal?>(null) }
+    var currentProposal = travelProposalViewModel.selectedProposal.collectAsState()
     var motivationMessage by remember { mutableStateOf("") }
     val guestApplicants = remember { mutableStateListOf<GuestApplicant>() }
 
     // Carica la proposta da Firestore
     LaunchedEffect(proposalId) {
-        travelProposalViewModel.getProposalById(proposalId) { proposal ->
-            currentProposal = proposal
-        }
+        travelProposalViewModel.loadProposalById(proposalId)
     }
 
     LaunchedEffect(Unit) {
@@ -87,7 +85,7 @@ fun ApplicationAddNewScreen(
     }
 
     val currentUser = userProfile ?: return
-    val proposal = currentProposal ?: return
+    val proposal = currentProposal.value ?: return
 
     val availableSlots = proposal.maxParticipants - proposal.participantsCount - 1
 

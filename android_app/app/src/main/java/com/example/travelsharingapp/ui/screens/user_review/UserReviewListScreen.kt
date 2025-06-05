@@ -27,9 +27,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -92,11 +89,7 @@ fun UserReviewListScreen(
                 key = { index -> reviews[index].reviewId },
                 itemContent = { index ->
                     val review = reviews[index]
-                    var user by remember { mutableStateOf<UserProfile?>(null) }
-
-                    LaunchedEffect(review.reviewerId) {
-                        user = userProfileViewModel.getOrFetchUserProfileById(review.reviewerId)
-                    }
+                    val user by userProfileViewModel.observeUserProfileById(review.reviewerId).collectAsState()
 
                     val fallbackUser = UserProfile(
                         userId = review.reviewerId,

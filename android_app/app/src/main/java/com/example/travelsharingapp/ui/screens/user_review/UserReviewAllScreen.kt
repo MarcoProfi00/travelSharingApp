@@ -59,7 +59,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.travelsharingapp.data.model.TravelProposal
 import com.example.travelsharingapp.data.model.UserProfile
 import com.example.travelsharingapp.data.model.UserReview
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
@@ -86,9 +85,13 @@ fun UserReviewAllScreen(
     onBack: () -> Unit
 ) {
     val currentUser by userProfileViewModel.selectedUserProfile.collectAsState()
-    val proposalState = remember { mutableStateOf<TravelProposal?>(null) }
+    val proposalFromState by travelProposalViewModel.selectedProposal.collectAsState()
 
     val reviews by userReviewViewModel.proposalReviews.collectAsState()
+
+    var acceptedParticipantIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isLoadingAcceptedParticipantIds by remember { mutableStateOf(true) }
+
     val companions = remember { mutableStateListOf<UserProfile>() }
     var selectedCompanionForDetail by remember { mutableStateOf<UserProfile?>(null) }
     var selectedCompanionIndexForDetail by remember { mutableStateOf<Int?>(null) }
@@ -99,40 +102,97 @@ fun UserReviewAllScreen(
     val isTabletInLandscape = isTablet && isLandscape
 
     LaunchedEffect(proposalId) {
-        travelProposalViewModel.getProposalById(proposalId) {
-            proposalState.value = it
+        if (proposalId.isNotBlank()) {
+            travelProposalViewModel.loadProposalById(proposalId)
+            userReviewViewModel.observeReviewsForProposal(proposalId)
+        }
+    }
+    val proposal = proposalFromState
+
+    LaunchedEffect(proposalId, userId, applicationViewModel) {
+        if (proposalId.isNotBlank() && userId.isNotBlank()) {
+            isLoadingAcceptedParticipantIds = true
+            acceptedParticipantIds = try {
+                applicationViewModel.getAcceptedParticipants(proposalId, userId)
+            } catch (_: Exception) {
+                emptyList()
+            } finally {
+                isLoadingAcceptedParticipantIds = false
+            }
+        } else {
+            acceptedParticipantIds = emptyList()
+            isLoadingAcceptedParticipantIds = false
         }
     }
 
-    LaunchedEffect(proposalId, userId, proposalState.value) {
-        val currentProposal = proposalState.value
+    val organizerProfile: UserProfile? = proposal?.let { p ->
+        if (p.organizerId != userId) {
+            userProfileViewModel.observeUserProfileById(p.organizerId).collectAsState().value
+        } else {
+            null
+        }
+    }
 
-        if (currentProposal == null) {
+    val acceptedCompanionProfileStates: List<UserProfile?> = acceptedParticipantIds.map { id ->
+        userProfileViewModel.observeUserProfileById(id).collectAsState().value
+    }
+
+    LaunchedEffect(
+        proposal,
+        organizerProfile,
+        acceptedCompanionProfileStates,
+        userId,
+        isLoadingAcceptedParticipantIds
+    ) {
+        if (isLoadingAcceptedParticipantIds || proposal == null) {
+            if (companions.isNotEmpty()) companions.clear()
+            selectedCompanionForDetail = null
+            selectedCompanionIndexForDetail = null
             return@LaunchedEffect
         }
 
-        userReviewViewModel.observeReviewsForProposal(proposalId)
-        val ids = applicationViewModel.getAcceptedParticipants(proposalId, userId)
-        companions.clear()
+        val newCompanionsList = mutableListOf<UserProfile>()
 
-        // first companion is owner
-        if (currentProposal.organizerId != userId) {
-            val organizer = userProfileViewModel.getOrFetchUserProfileById(currentProposal.organizerId)
-            organizer?.let {
-                companions.add(0, it)
+        if (proposal.organizerId != userId) {
+            organizerProfile?.let { newCompanionsList.add(it) }
+        }
+
+        acceptedCompanionProfileStates.filterNotNull().forEach { profile ->
+            if (profile.userId != proposal.organizerId || proposal.organizerId == userId) {
+                newCompanionsList.add(profile)
             }
         }
 
-        val fetchedCompanions = ids.mapNotNull { companionId ->
-            userProfileViewModel.getOrFetchUserProfileById(companionId)
-        }
-        companions.addAll(fetchedCompanions)
+        val distinctNewCompanions = newCompanionsList.distinctBy { it.userId }
 
-        if (isTabletInLandscape && selectedCompanionForDetail == null && companions.isNotEmpty()) {
+        if (companions.toList() != distinctNewCompanions) {
+            companions.clear()
+            companions.addAll(distinctNewCompanions)
+
+            val currentSelectedId = selectedCompanionForDetail?.userId
+            val newSelection = if (currentSelectedId != null) companions.find { it.userId == currentSelectedId } else null
+
+            if (newSelection != null) {
+                selectedCompanionForDetail = newSelection
+                selectedCompanionIndexForDetail = companions.indexOf(newSelection).takeIf { it != -1 }
+            } else if (isTabletInLandscape && companions.isNotEmpty()) {
+                selectedCompanionForDetail = companions.first()
+                selectedCompanionIndexForDetail = 0
+            } else {
+                selectedCompanionForDetail = null
+                selectedCompanionIndexForDetail = null
+            }
+        } else if (isTabletInLandscape && selectedCompanionForDetail == null && companions.isNotEmpty() && companions.toList() == distinctNewCompanions) {
             selectedCompanionForDetail = companions.first()
             selectedCompanionIndexForDetail = 0
         }
     }
+
+    val isLoadingInitialData = proposal == null || currentUser == null
+    val isPopulatingCompanions = isLoadingAcceptedParticipantIds ||
+            (proposal != null && proposal.organizerId != userId && organizerProfile == null && !acceptedParticipantIds.contains(proposal.organizerId)) ||
+            (acceptedParticipantIds.isNotEmpty() && acceptedCompanionProfileStates.any { it == null })
+
 
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
@@ -146,7 +206,7 @@ fun UserReviewAllScreen(
         )
     }
 
-    if (proposalState.value == null || companions.isEmpty()) {
+    if (isLoadingInitialData || isPopulatingCompanions) {
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -155,7 +215,7 @@ fun UserReviewAllScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator()
-            Text("Loading trip participants...")
+            Text("Loading trip details...")
         }
     } else if (currentUser != null) {
         if (isTabletInLandscape) {
