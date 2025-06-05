@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.travelsharingapp.data.model.TravelProposalReview
 import com.example.travelsharingapp.data.repository.TravelReviewRepository
-import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,55 +21,27 @@ class TravelReviewViewModel(
     private val _proposalSpecificReviews = MutableStateFlow<List<TravelProposalReview>>(emptyList())
     val proposalSpecificReviews: StateFlow<List<TravelProposalReview>> = _proposalSpecificReviews.asStateFlow()
 
-    //StateFlow che rappresenta le review attualmente visibili
-    private val _visibleReviews = MutableStateFlow<List<TravelProposalReview>>(emptyList())
-    val visibleReviews: StateFlow<List<TravelProposalReview>> = _visibleReviews.asStateFlow()
-
-
-    fun loadReviewsForProposal(proposalId: String) {
-        viewModelScope.launch {
-            val latestReviews = reviewRepository.getReviewsByProposalId(proposalId)
-            _proposalSpecificReviews.value = latestReviews
-
-            if (_visibleReviews.value.isEmpty()) {
-                _visibleReviews.value = latestReviews
-            }
-        }
-    }
-
-    private var reviewListener: ListenerRegistration? = null
+    private var reviewListenerJob: Job? = null
 
     fun observeReviews(proposalId: String) {
-        reviewListener?.remove() // Rimuovi vecchio listener se presente
+//        if (reviewListenerJob?.isActive == true) {
+//            return
+//        }
 
-        reviewListener = reviewRepository.observeReviewsByProposalId(proposalId) { latestReviews ->
-            val currentVisible = _visibleReviews.value
+        reviewListenerJob?.cancel()
 
-            // Aggiorna tutte le review
-            _proposalSpecificReviews.value = latestReviews
-
-            // Se è la prima volta o la lista era già sincronizzata, aggiorna anche visible
-            if (_visibleReviews.value.isEmpty() || latestReviews == currentVisible) {
-                _visibleReviews.value = latestReviews
+        reviewListenerJob = viewModelScope.launch {
+            reviewRepository.observeReviewsByProposalId(proposalId)
+                .collect { latestReviews ->
+                _proposalSpecificReviews.value = latestReviews
             }
         }
     }
 
     override fun onCleared() {
         super.onCleared()
-        reviewListener?.remove()
+        reviewListenerJob?.cancel()
     }
-
-
-
-
-
-    //mostra le review nuove
-    fun acceptLatestReviews() {
-        _visibleReviews.value = _proposalSpecificReviews.value
-    }
-
-
 
     fun addReview(
         proposalId: String,
@@ -78,7 +50,6 @@ class TravelReviewViewModel(
     ) {
         viewModelScope.launch {
             reviewRepository.addReview(proposalId, review)
-            loadReviewsForProposal(proposalId)
             onComplete?.invoke()
         }
     }
@@ -90,19 +61,16 @@ class TravelReviewViewModel(
     ) {
         viewModelScope.launch {
             reviewRepository.updateReview(proposalId, review)
-            loadReviewsForProposal(proposalId)
             onComplete?.invoke()
         }
     }
 
     fun deleteReview(
-        proposalId: String,
         reviewId: String,
         onComplete: (() -> Unit)? = null
     ) {
         viewModelScope.launch {
             reviewRepository.deleteReview(reviewId)
-            loadReviewsForProposal(proposalId)
             onComplete?.invoke()
         }
     }

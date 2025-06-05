@@ -320,18 +320,6 @@ class TravelProposalViewModel(
         }
     }
 
-    fun loadProposalById(proposalId: String) {
-        viewModelScope.launch {
-            try {
-                val proposal = repository.getProposalById(proposalId)
-                _selectedProposal.value = proposal
-            } catch (e: Exception) {
-                Log.e("TravelProposalViewModel", "Failed to load proposal: $proposalId", e)
-                _selectedProposal.value = null
-            }
-        }
-    }
-
     fun loadProposalToEdit(proposalId: String) {
         viewModelScope.launch {
             _isLoading.value = true

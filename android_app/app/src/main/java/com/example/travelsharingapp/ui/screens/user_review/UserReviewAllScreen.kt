@@ -100,7 +100,7 @@ fun UserReviewAllScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CircularProgressIndicator()
-            Text("Loading essential review data...")
+            Text("Loading proposal data...")
         }
         return
     }

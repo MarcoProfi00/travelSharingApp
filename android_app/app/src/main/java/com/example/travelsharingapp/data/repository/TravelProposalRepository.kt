@@ -32,18 +32,6 @@ class TravelProposalRepository(private val context: Context) {
         awaitClose { registration.remove() }
     }
 
-    fun observeProposalById(proposalId: String): Flow<TravelProposal?> = callbackFlow {
-        val registration: ListenerRegistration = collection.document(proposalId)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    cancel("Snapshot error for $proposalId", error)
-                    return@addSnapshotListener
-                }
-                trySend(snapshot?.toObject(TravelProposal::class.java))
-            }
-        awaitClose { registration.remove() }
-    }
-
     fun observeProposalsByOrganizer(organizerId: String): Flow<List<TravelProposal>> = callbackFlow {
         val registration: ListenerRegistration = collection
             .whereEqualTo("organizerId", organizerId)

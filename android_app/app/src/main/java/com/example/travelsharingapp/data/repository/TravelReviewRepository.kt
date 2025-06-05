@@ -3,6 +3,10 @@ package com.example.travelsharingapp.data.repository
 import com.example.travelsharingapp.data.model.TravelProposalReview
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class TravelReviewRepository() {
@@ -10,32 +14,17 @@ class TravelReviewRepository() {
     private val db = FirebaseFirestore.getInstance()
     private val collection = db.collection("travel_reviews")
 
-    suspend fun getReviewsByProposalId(proposalId: String): List<TravelProposalReview> {
-        return try {
-            collection
-                .whereEqualTo("proposalId", proposalId)
-                .get()
-                .await()
-                .documents
-                .mapNotNull { it.toObject(TravelProposalReview::class.java)?.copy(reviewId = it.id) }
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
-
-    fun observeReviewsByProposalId(
-        proposalId: String,
-        onDataChange: (List<TravelProposalReview>) -> Unit
-    ): ListenerRegistration {
-        return FirebaseFirestore.getInstance()
-            .collection("travel_reviews")
+    fun observeReviewsByProposalId(proposalId: String): Flow<List<TravelProposalReview>> = callbackFlow {
+        val registration: ListenerRegistration = collection
             .whereEqualTo("proposalId", proposalId)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null) return@addSnapshotListener
-
-                val reviews = snapshot.documents.mapNotNull { it.toObject(TravelProposalReview::class.java) }
-                onDataChange(reviews)
+            .addSnapshotListener { snapshot, error  ->
+            if (error != null) {
+                cancel("Snapshot error", error)
+                return@addSnapshotListener
             }
+            trySend(snapshot?.toObjects(TravelProposalReview::class.java) ?: emptyList())
+        }
+        awaitClose { registration.remove() }
     }
 
 

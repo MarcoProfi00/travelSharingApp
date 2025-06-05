@@ -89,9 +89,8 @@ fun TravelReviewAddNewScreen(
 
 
     LaunchedEffect(proposalId) {
-        reviewViewModel.loadReviewsForProposal(proposalId)
+        reviewViewModel.observeReviews(proposalId)
     }
-
 
     val reviews by reviewViewModel.proposalSpecificReviews.collectAsState()
     val userReview = reviews.find { it.reviewerId == currentUser.userId }

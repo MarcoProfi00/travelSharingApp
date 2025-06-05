@@ -757,7 +757,7 @@ fun AppContent(
                                 navController.navigate(AppRoutes.addReview(proposalId))
                             },
                             onDeleteReview = { reviewId ->
-                                travelReviewViewModel.deleteReview(proposalId, reviewId)
+                                travelReviewViewModel.deleteReview(reviewId)
                             },
                             userProfileViewModel = userProfileViewModel,
                             onNavigateToUserProfileInfo = { userId ->

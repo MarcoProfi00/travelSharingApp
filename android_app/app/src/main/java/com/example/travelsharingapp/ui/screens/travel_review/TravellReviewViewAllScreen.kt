@@ -86,25 +86,36 @@ fun TravelReviewViewAllScreen(
     onBack: () -> Unit,
     onNavigateToUserProfileInfo: (String) -> Unit,
 ) {
+    val observedUser by userProfileViewModel.selectedUserProfile.collectAsState()
+    val observedProposal by travelProposalViewModel.selectedProposal.collectAsState()
+    val allReviews by reviewViewModel.proposalSpecificReviews.collectAsState()
 
     LaunchedEffect(proposalId) {
-        travelProposalViewModel.loadProposalById(proposalId)
+        travelProposalViewModel.setDetailProposalId(proposalId)
+    }
+
+    if (observedProposal == null) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator()
+            Text("Loading proposal data...")
+        }
+        return
+    }
+
+    LaunchedEffect(proposalId) {
         reviewViewModel.observeReviews(proposalId)
     }
 
     val showDeleteDialog = remember { mutableStateOf(false) }
     val reviewIdToDelete = remember { mutableStateOf<String?>(null) }
 
-    val selectedUser by userProfileViewModel.selectedUserProfile.collectAsState()
-    if (selectedUser == null) {
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        return
-    }
-    val currentUser = selectedUser!!
-
-    val allReviews by reviewViewModel.proposalSpecificReviews.collectAsState()
+    val currentUser = observedUser!!
 
     val isTablet = shouldUseTabletLayout()
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE

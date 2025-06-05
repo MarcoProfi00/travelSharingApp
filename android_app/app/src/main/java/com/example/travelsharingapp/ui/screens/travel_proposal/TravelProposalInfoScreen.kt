@@ -236,7 +236,7 @@ fun TravelProposalInfoScreen(
     }
 
     LaunchedEffect(proposalId) {
-        reviewViewModel.loadReviewsForProposal(proposalId)
+        reviewViewModel.observeReviews(proposalId)
     }
 
     LaunchedEffect(proposal) {
