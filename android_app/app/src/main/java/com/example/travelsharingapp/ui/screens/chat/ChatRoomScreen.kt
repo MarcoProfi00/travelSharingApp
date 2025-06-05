@@ -17,8 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -52,7 +53,7 @@ fun ChatRoomScreen(
     chatViewModel: ChatViewModel,
     topBarViewModel: TopBarViewModel,
     onNavigateBack: () -> Unit,
-    showBottomBar: MutableState<Boolean>
+    hideBottomBar: MutableState<Boolean>
 ) {
     val messages by chatViewModel.messages.collectAsState()
     var newMessage by remember { mutableStateOf("") }
@@ -62,17 +63,20 @@ fun ChatRoomScreen(
         topBarViewModel.setConfig(
             title = "Group Chat",
             navigationIcon = {
-                IconButton(onClick = {
-                    showBottomBar.value = true  //Bottom bar di nuovo visibile
-                    onNavigateBack()
-                }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                IconButton(onClick = { onNavigateBack() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
             },
             actions = null
         )
-        showBottomBar.value = false
+        hideBottomBar.value = true
         chatViewModel.observeMessages(proposalId)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            hideBottomBar.value = false
+        }
     }
 
     Column(
@@ -177,7 +181,7 @@ fun ChatRoomScreen(
                     }
                 }
             ) {
-                Icon(Icons.Default.Send, contentDescription = "Send")
+                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
             }
         }
     }

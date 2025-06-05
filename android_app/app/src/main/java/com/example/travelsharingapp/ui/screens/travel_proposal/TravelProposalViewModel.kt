@@ -476,35 +476,6 @@ class TravelProposalViewModel(
 
     fun loadProposalToEdit(proposalId: String) {
         viewModelScope.launch {
-            _isLoading.value = true
-            val proposals = repository.getAllProposals()
-            _allProposals.value = proposals
-            applyFilters()
-            _isLoading.value = false
-        }
-    }
-
-    fun loadOwnedProposals(userId: String) {
-        repository.getProposalsByOrganizer(userId) { proposals ->
-            _ownedProposals.value = proposals
-        }
-    }
-
-
-    fun getProposalById(proposalId: String, onResult: (TravelProposal?) -> Unit) {
-        viewModelScope.launch {
-            val proposal = repository.getProposalById(proposalId)
-            if (proposal == null) {
-                Log.e("INFO_SCREEN", "Proposal NOT FOUND per ID: $proposalId")
-            } else {
-                Log.d("INFO_SCREEN", "Loaded proposal = ${proposal.name}")
-            }
-            onResult(proposal)
-        }
-    }
-
-    fun loadProposalById(proposalId: String) {
-        viewModelScope.launch {
             try {
                 val proposal = repository.getProposalById(proposalId)
                 if (proposal != null) {

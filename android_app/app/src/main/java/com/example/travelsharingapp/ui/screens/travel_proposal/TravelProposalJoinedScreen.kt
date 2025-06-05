@@ -18,7 +18,9 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Upcoming
@@ -56,6 +58,7 @@ import com.example.travelsharingapp.data.model.TravelProposal
 import com.example.travelsharingapp.ui.screens.main.AppRoutes
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
+import com.google.android.play.integrity.internal.ac
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -76,7 +79,7 @@ fun TravelProposalJoinedScreen(
     topBarViewModel: TopBarViewModel,
     onNavigateToReviewPage: (String) -> Unit,
     onNavigateToProposalInfo: (String) -> Unit,
-    navController: NavController
+    onNavigateToChat: () -> Unit
 ) {
     val tabs = listOf(
         TabItem("Upcoming", Icons.Filled.Upcoming),
@@ -116,8 +119,8 @@ fun TravelProposalJoinedScreen(
             title = "Joined Proposals",
             navigationIcon = { /* nothing */ },
             actions = {
-                IconButton(onClick = { navController.navigate(AppRoutes.CHAT_LIST) }) {
-                    Icon(Icons.Default.Chat, contentDescription = "Chat")
+                IconButton(onClick = { onNavigateToChat() }) {
+                    Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Chat")
                 }
             }
         )

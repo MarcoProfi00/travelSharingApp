@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import coil.compose.AsyncImage
@@ -44,14 +44,12 @@ fun ChatListScreen(
 
     LaunchedEffect(userId) {
         travelApplicationViewModel.loadApplicationsForUser(userId)
-        travelProposalViewModel.loadAllProposals()
-        travelProposalViewModel.loadOwnedProposals(userId)
 
         topBarViewModel.setConfig(
             title = "Chat",
             navigationIcon = {
                 IconButton(onClick = { onNavigateBack() }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
             },
             actions = null

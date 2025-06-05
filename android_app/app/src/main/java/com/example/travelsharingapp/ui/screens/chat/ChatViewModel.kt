@@ -20,7 +20,6 @@ class ChatViewModel(
         }
     }
 
-
     suspend fun sendMessage(proposalId: String, message: ChatMessage) {
         chatRepository.sendMessage(proposalId, message)
     }

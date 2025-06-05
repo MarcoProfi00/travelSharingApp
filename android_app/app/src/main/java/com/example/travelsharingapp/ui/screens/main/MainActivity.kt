@@ -155,8 +155,6 @@ object AppRoutes {
     const val SETTINGS = "settings"
     const val INITIAL_PROFILE_SETUP = "initialProfileSetup"
 
-    const val CHAT = "chat"
-
     const val CHANGE_PASSWORD = "changePassword"
     const val RESET_PASSWORD = "resetPassword"
     const val MANAGE_PASSKEYS = "managePasskeys"
@@ -345,7 +343,7 @@ fun AppContent(
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
-    val showBottomBar = remember { mutableStateOf(true) }
+    val hideBottomBar = remember { mutableStateOf(false) }
 
     // Lock screen on non-tablet devices
     if(!shouldUseTabletLayout())
@@ -365,6 +363,7 @@ fun AppContent(
     val travelReviewRepo = TravelReviewRepository()
     val userReviewRepo = UserReviewRepository()
     val notificationRepo = NotificationRepository()
+    val chatRepo = ChatRepository()
 
     val travelProposalViewModel: TravelProposalViewModel = viewModel(
         factory = TravelProposalViewModelFactory(travelProposalRepo)
@@ -388,6 +387,10 @@ fun AppContent(
 
     val userReviewViewModel: UserReviewViewModel = viewModel(
         factory = UserReviewViewModelFactory(userReviewRepo, userProfileRepo)
+    )
+
+    val chatViewModel: ChatViewModel = viewModel(
+        factory = ChatViewModelFactory(chatRepo)
     )
 
     val topBarViewModel: TopBarViewModel = viewModel()
@@ -575,15 +578,13 @@ fun AppContent(
                 }
             },
             bottomBar = {
-                if (showBottomBar.value) {
-                    if (!WindowInsets.isImeVisible && authState is AuthState.Authenticated && currentUser != null) {
-                        BottomNavigationBar(
-                            selectedTab = currentTab,
-                            onTabSelected = { currentTab = it },
-                            navController = navController,
-                            currentUserId = currentUser.uid
-                        )
-                    }
+                if (!WindowInsets.isImeVisible && authState is AuthState.Authenticated && currentUser != null && !hideBottomBar.value) {
+                    BottomNavigationBar(
+                        selectedTab = currentTab,
+                        onTabSelected = { currentTab = it },
+                        navController = navController,
+                        currentUserId = currentUser.uid
+                    )
                 }
             },
             modifier = Modifier
@@ -816,15 +817,14 @@ fun AppContent(
                             proposalViewModel = travelProposalViewModel,
                             topBarViewModel = topBarViewModel,
                             onNavigateToChat = {
-                                navController.navigate(AppRoutes.CHAT)
+                                navController.navigate(AppRoutes.CHAT_LIST)
                             },
                             onNavigateToTravelProposalInfo = { proposalId ->
                                 navController.navigate(AppRoutes.travelProposalInfo(proposalId))
                             },
                             onNavigateToTravelProposalEdit = { proposalId ->
                                 navController.navigate(AppRoutes.travelProposalEdit(proposalId))
-                            },
-                            navController = navController
+                            }
                         )
                     }
                 }
@@ -945,11 +945,6 @@ fun AppContent(
                     }
                 }
 
-                // APP CHAT
-                composable(AppRoutes.CHAT) {
-                    TODO("Chat screen not implemented yet")
-                }
-
                 //Manage Applications
                 composable(
                     AppRoutes.MANAGE_APPLICATIONS,
@@ -1028,7 +1023,9 @@ fun AppContent(
                                     AppRoutes.travelProposalInfo(proposalId)
                                 )
                             },
-                            navController = navController
+                            onNavigateToChat = {
+                                navController.navigate(AppRoutes.CHAT_LIST)
+                            }
                         )
                     }
                 }
@@ -1115,10 +1112,6 @@ fun AppContent(
                 ) { backStackEntry ->
                     val proposalId = backStackEntry.arguments?.getString("proposalId") ?: return@composable
 
-                    val chatViewModel: ChatViewModel = viewModel(
-                        factory = ChatViewModelFactory(ChatRepository())
-                    )
-
                     if (currentUser != null) {
                         ChatRoomScreen(
                             proposalId = proposalId,
@@ -1127,7 +1120,7 @@ fun AppContent(
                             chatViewModel = chatViewModel,
                             topBarViewModel = topBarViewModel,
                             onNavigateBack = { navController.popBackStack() },
-                            showBottomBar = showBottomBar
+                            hideBottomBar = hideBottomBar
                         )
                     }
                 }

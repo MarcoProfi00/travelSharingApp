@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.MarkEmailUnread
@@ -109,7 +110,7 @@ fun TravelProposalOwnedListScreen(
             navigationIcon = { /* nothing */ },
             actions = {
                 IconButton(onClick = { navController.navigate(AppRoutes.CHAT_LIST) }) {
-                    Icon(Icons.Default.Chat, contentDescription = "Chat")
+                    Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Chat")
                 }
             }
         )
