@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.MarkEmailUnread
@@ -38,6 +39,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -105,7 +107,11 @@ fun TravelProposalOwnedListScreen(
         topBarViewModel.setConfig(
             title = "My Travel Proposals",
             navigationIcon = { /* nothing */ },
-            actions = { /* No specific actions for this screen*/ }
+            actions = {
+                IconButton(onClick = { navController.navigate(AppRoutes.CHAT_LIST) }) {
+                    Icon(Icons.Default.Chat, contentDescription = "Chat")
+                }
+            }
         )
     }
 

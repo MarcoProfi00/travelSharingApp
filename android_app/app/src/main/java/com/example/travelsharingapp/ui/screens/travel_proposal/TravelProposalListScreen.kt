@@ -43,6 +43,7 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.filled.BeachAccess
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
@@ -126,12 +127,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.travelsharingapp.R
 import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.data.model.ProposalStatus
 import com.example.travelsharingapp.data.model.TravelProposal
 import com.example.travelsharingapp.data.model.Typology
+import com.example.travelsharingapp.ui.screens.main.AppRoutes
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
@@ -159,7 +162,8 @@ fun TravelProposalListScreen(
     topBarViewModel: TopBarViewModel,
     onNavigateToFavorites: () -> Unit,
     onNavigateToTravelProposalInfo: (String) -> Unit,
-    onNavigateToTravelProposalEdit: (String) -> Unit
+    onNavigateToTravelProposalEdit: (String) -> Unit,
+    navController: NavController
 ) {
     val configuration = LocalConfiguration.current
     val scope = rememberCoroutineScope()
@@ -289,6 +293,9 @@ fun TravelProposalListScreen(
             actions = {
                 IconButton(onClick = { onNavigateToFavorites() }) {
                     Icon(Icons.Default.FavoriteBorder, contentDescription = "Favorites")
+                }
+                IconButton(onClick = { navController.navigate(AppRoutes.CHAT_LIST) }) {
+                    Icon(Icons.Default.Chat, contentDescription = "Chat")
                 }
             },
             floatingActionButton = { /* nothing */ }

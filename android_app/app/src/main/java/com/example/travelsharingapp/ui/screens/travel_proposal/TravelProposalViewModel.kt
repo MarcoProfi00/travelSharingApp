@@ -327,6 +327,13 @@ class TravelProposalViewModel(
         }
     }
 
+    fun loadOwnedProposals(userId: String) {
+        repository.getProposalsByOrganizer(userId) { proposals ->
+            _ownedProposals.value = proposals
+        }
+    }
+
+
     fun getProposalById(proposalId: String, onResult: (TravelProposal?) -> Unit) {
         viewModelScope.launch {
             val proposal = repository.getProposalById(proposalId)
