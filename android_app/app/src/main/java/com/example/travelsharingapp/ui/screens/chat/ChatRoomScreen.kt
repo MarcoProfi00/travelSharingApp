@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -57,6 +58,7 @@ fun ChatRoomScreen(
     var newMessage by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
 
+
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
             title = "Group Chat",
@@ -91,17 +93,26 @@ fun ChatRoomScreen(
                 )
             }
         } else {
+            val listState = rememberLazyListState()
+            val sortedMessages = messages.sortedBy { it.timestamp }
+            LaunchedEffect(messages.size) {
+                if (messages.isNotEmpty()) {
+                    listState.animateScrollToItem(messages.lastIndex)
+                }
+            }
+
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                reverseLayout = true
+                //reverseLayout = true
             ) {
                 items(
-                    count = messages.size,
-                    key = { index -> messages[index].messageId },
+                    count = sortedMessages.size,
+                    key = { index -> sortedMessages[index].messageId },
                     itemContent = { index ->
-                        val message = messages[index]
+                        val message = sortedMessages[index]
                         val isOwnMessage = message.senderId == userId
                         Row(
                             modifier = Modifier.fillMaxWidth(),
