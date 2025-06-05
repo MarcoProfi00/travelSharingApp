@@ -343,7 +343,6 @@ fun AppContent(
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
-    val hideBottomBar = remember { mutableStateOf(false) }
 
     // Lock screen on non-tablet devices
     if(!shouldUseTabletLayout())
@@ -578,7 +577,9 @@ fun AppContent(
                 }
             },
             bottomBar = {
-                if (!WindowInsets.isImeVisible && authState is AuthState.Authenticated && currentUser != null && !hideBottomBar.value) {
+                if (!WindowInsets.isImeVisible && authState is AuthState.Authenticated &&
+                    currentUser != null &&
+                    (navController.currentDestination?.route?.startsWith(AppRoutes.CHAT_ROOM.substringBefore("/{")) == false)) {
                     BottomNavigationBar(
                         selectedTab = currentTab,
                         onTabSelected = { currentTab = it },
@@ -1093,6 +1094,7 @@ fun AppContent(
                 composable(AppRoutes.CHAT_LIST) {
                     if (currentUser != null) {
                         ChatListScreen(
+                            modifier = Modifier.padding(innerPadding),
                             userId = currentUser.uid,
                             travelProposalViewModel = travelProposalViewModel,
                             travelApplicationViewModel = travelApplicationViewModel,
@@ -1114,13 +1116,13 @@ fun AppContent(
 
                     if (currentUser != null) {
                         ChatRoomScreen(
+                            modifier = Modifier.padding(innerPadding),
                             proposalId = proposalId,
                             userId = currentUser.uid,
                             userName = currentUser.displayName ?: "Anonymous",
                             chatViewModel = chatViewModel,
                             topBarViewModel = topBarViewModel,
-                            onNavigateBack = { navController.popBackStack() },
-                            hideBottomBar = hideBottomBar
+                            onNavigateBack = { navController.popBackStack() }
                         )
                     }
                 }

@@ -31,6 +31,7 @@ import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalVie
 
 @Composable
 fun ChatListScreen(
+    modifier: Modifier,
     userId: String,
     travelProposalViewModel: TravelProposalViewModel,
     travelApplicationViewModel: TravelApplicationViewModel,
@@ -42,8 +43,7 @@ fun ChatListScreen(
     val ownedProposals by travelProposalViewModel.ownedProposals.collectAsState()
     val allApplications by travelApplicationViewModel.applications.collectAsState()
 
-    LaunchedEffect(userId) {
-        travelApplicationViewModel.loadApplicationsForUser(userId)
+    LaunchedEffect(Unit) {
 
         topBarViewModel.setConfig(
             title = "Chat",
@@ -54,6 +54,11 @@ fun ChatListScreen(
             },
             actions = null
         )
+    }
+
+    LaunchedEffect(userId) {
+        travelApplicationViewModel.loadApplicationsForUser(userId)
+        travelProposalViewModel.startListeningOwnedProposals(userId)
     }
 
     val acceptedApplications = allApplications.filter {
@@ -67,24 +72,31 @@ fun ChatListScreen(
     val chatProposals = (ownedProposals + joinedProposals)
         .distinctBy { it.proposalId }
 
-    LazyColumn(modifier = Modifier.padding(16.dp)) {
-        items(chatProposals) { proposal ->
-            ElevatedCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .clickable { onNavigateToChat(proposal.proposalId) }
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AsyncImage(
-                        model = proposal.images.firstOrNull(),
-                        contentDescription = proposal.name,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(proposal.name, style = MaterialTheme.typography.titleMedium)
+    LazyColumn(
+        modifier = modifier.padding(16.dp)
+    ) {
+        items(
+            count = chatProposals.size,
+            key = { index -> chatProposals[index].proposalId },
+            itemContent = { index ->
+                val proposal = chatProposals[index]
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                        .clickable { onNavigateToChat(proposal.proposalId) }
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AsyncImage(
+                            model = proposal.images.firstOrNull(),
+                            contentDescription = proposal.name,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(proposal.name, style = MaterialTheme.typography.titleMedium)
+                    }
                 }
             }
-        }
+        )
     }
 }

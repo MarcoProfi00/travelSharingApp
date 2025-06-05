@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,29 +30,28 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.travelsharingapp.data.model.ChatMessage
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun ChatRoomScreen(
+    modifier: Modifier,
     proposalId: String,
     userId: String,
     userName: String,
     chatViewModel: ChatViewModel,
     topBarViewModel: TopBarViewModel,
-    onNavigateBack: () -> Unit,
-    hideBottomBar: MutableState<Boolean>
+    onNavigateBack: () -> Unit
 ) {
     val messages by chatViewModel.messages.collectAsState()
     var newMessage by remember { mutableStateOf("") }
@@ -69,20 +67,13 @@ fun ChatRoomScreen(
             },
             actions = null
         )
-        hideBottomBar.value = true
         chatViewModel.observeMessages(proposalId)
     }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            hideBottomBar.value = false
-        }
-    }
-
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
-            .padding(8.dp)
+            .padding(16.dp)
             .imePadding()
     ) {
         if (messages.isEmpty()) {
@@ -106,33 +97,40 @@ fun ChatRoomScreen(
                     .fillMaxWidth(),
                 reverseLayout = true
             ) {
-                items(messages.reversed(), key = { it.messageId }) { message ->
-                    val isOwnMessage = message.senderId == userId
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (isOwnMessage) Arrangement.End else Arrangement.Start
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .padding(4.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isOwnMessage) MaterialTheme.colorScheme.primary else Color.Gray)
-                                .padding(12.dp)
-                                .widthIn(max = 280.dp)
+                items(
+                    count = messages.size,
+                    key = { index -> messages[index].messageId },
+                    itemContent = { index ->
+                        val message = messages[index]
+                        val isOwnMessage = message.senderId == userId
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = if (isOwnMessage) Arrangement.End else Arrangement.Start
                         ) {
-                            if (!isOwnMessage) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isOwnMessage) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer)
+                                    .padding(12.dp)
+                                    .widthIn(max = 280.dp)
+                            ) {
+                                if (!isOwnMessage) {
+                                    Text(
+                                        text = message.senderName,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
                                 Text(
-                                    text = message.senderName,
-                                    style = MaterialTheme.typography.labelSmall.copy(color = Color.White, fontSize = 12.sp)
+                                    text = message.message,
+                                    color = (if (isOwnMessage) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer),
+                                    style = MaterialTheme.typography.bodyMedium
                                 )
                             }
-                            Text(
-                                text = message.message,
-                                style = MaterialTheme.typography.bodyMedium.copy(color = Color.White)
-                            )
                         }
                     }
-                }
+                )
             }
         }
 

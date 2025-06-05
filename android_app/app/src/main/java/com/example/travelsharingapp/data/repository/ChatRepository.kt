@@ -12,7 +12,7 @@ class ChatRepository {
         db.collection("travelProposals")
             .document(proposalId)
             .collection("messages")
-            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
                     onResult(emptyList())
