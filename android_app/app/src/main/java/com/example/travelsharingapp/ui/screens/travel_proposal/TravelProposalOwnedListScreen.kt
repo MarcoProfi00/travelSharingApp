@@ -87,7 +87,7 @@ fun TravelProposalOwnedListScreen(
     }
 
     LaunchedEffect(userId) {
-        viewModel.startListeningProposals(userId)
+        viewModel.startListeningOwnedProposals(userId)
     }
     val ownedProposals by viewModel.ownedProposals.collectAsState()
 

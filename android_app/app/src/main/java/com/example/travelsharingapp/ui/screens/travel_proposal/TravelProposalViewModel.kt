@@ -21,9 +21,23 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
 
+sealed class TravelImage {
+    data class UriImage(val uri: String) : TravelImage()
+}
+
 class TravelProposalViewModel(
     private val repository: TravelProposalRepository
 ) : ViewModel() {
+
+    private val _allProposals = MutableStateFlow<List<TravelProposal>>(emptyList())
+    val allProposals: StateFlow<List<TravelProposal>> = _allProposals
+
+    private val _ownedProposals = MutableStateFlow<List<TravelProposal>>(emptyList())
+    val ownedProposals: StateFlow<List<TravelProposal>> = _ownedProposals
+
+    private val _selectedProposal = MutableStateFlow<TravelProposal?>(null)
+    val selectedProposal: StateFlow<TravelProposal?> = _selectedProposal
+    private var currentDetailProposalId: String? = null
 
     val name = MutableStateFlow("")
     val startDate = MutableStateFlow<LocalDate?>(null)
@@ -38,7 +52,6 @@ class TravelProposalViewModel(
     val organizerId = MutableStateFlow("")
     val imageUris = MutableStateFlow<List<TravelImage>>(emptyList())
     val messages = MutableStateFlow<List<Message>>(emptyList())
-
     val participantsCount = MutableStateFlow(0)
     val pendingApplicationsCount = MutableStateFlow(0)
     val status = MutableStateFlow("Published")
@@ -56,15 +69,8 @@ class TravelProposalViewModel(
     private val _applicationIds = MutableStateFlow<List<String>>(emptyList())
     val applicationIds: StateFlow<List<String>> = _applicationIds
 
-    private val _allProposals = MutableStateFlow<List<TravelProposal>>(emptyList())
-    val allProposals: StateFlow<List<TravelProposal>> = _allProposals
-
     private val _creationSuccess = MutableStateFlow(false)
     //val creationSuccess: StateFlow<Boolean> = _creationSuccess
-
-    private val _selectedProposal = MutableStateFlow<TravelProposal?>(null)
-    val selectedProposal: StateFlow<TravelProposal?> = _selectedProposal
-    private var currentDetailProposalId: String? = null
 
     private var ownedListenerJob: Job? = null
     private var exploreListenerJob: Job? = null
@@ -311,18 +317,6 @@ class TravelProposalViewModel(
         }
     }
 
-    fun getProposalById(proposalId: String, onResult: (TravelProposal?) -> Unit) {
-        viewModelScope.launch {
-            val proposal = repository.getProposalById(proposalId)
-            if (proposal == null) {
-                Log.e("INFO_SCREEN", "Proposal NOT FOUND per ID: $proposalId")
-            } else {
-                Log.d("INFO_SCREEN", "Loaded proposal = ${proposal.name}")
-            }
-            onResult(proposal)
-        }
-    }
-
     fun loadProposalById(proposalId: String) {
         viewModelScope.launch {
             try {
@@ -336,52 +330,73 @@ class TravelProposalViewModel(
     }
 
     fun loadProposalToEdit(proposalId: String) {
-        getProposalById(proposalId) { proposal ->
-            if (proposal == null) return@getProposalById
-
-            name.value = proposal.name
-            organizerId.value = proposal.organizerId
-            startDate.value = proposal.startDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
-            endDate.value = proposal.endDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
-            minPrice.value = proposal.minPrice.toFloat()
-            maxPrice.value = proposal.maxPrice.toFloat()
-            maxParticipantsAllowed.value = proposal.maxParticipants.toString()
-            typology.value = proposal.typology
-            description.value = proposal.description
-            suggestedActivities.value = proposal.suggestedActivities
-            itinerary.value = proposal.itinerary
-            imageUris.value = proposal.images.map { TravelImage.UriImage(it) }
-            messages.value = proposal.messages
-            _applicationIds.value = proposal.applicationIds
-            pendingApplicationsCount.value = proposal.pendingApplicationsCount
-            participantsCount.value = proposal.participantsCount
-            status.value = proposal.status
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val proposal = repository.getProposalById(proposalId)
+                if (proposal != null) {
+                    name.value = proposal.name
+                    organizerId.value = proposal.organizerId
+                    startDate.value = proposal.startDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+                    endDate.value = proposal.endDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+                    minPrice.value = proposal.minPrice.toFloat()
+                    maxPrice.value = proposal.maxPrice.toFloat()
+                    maxParticipantsAllowed.value = proposal.maxParticipants.toString()
+                    typology.value = proposal.typology
+                    description.value = proposal.description
+                    suggestedActivities.value = proposal.suggestedActivities
+                    itinerary.value = proposal.itinerary
+                    imageUris.value = proposal.images.map { TravelImage.UriImage(it) }
+                    messages.value = proposal.messages
+                    _applicationIds.value = proposal.applicationIds
+                    pendingApplicationsCount.value = proposal.pendingApplicationsCount
+                    participantsCount.value = proposal.participantsCount
+                    status.value = proposal.status
+                    resetErrors()
+                }
+            } catch (e: Exception) {
+                Log.e("LoadToEdit", "Error loading proposal $proposalId for edit", e)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
     fun loadProposalToDuplicate(sourceProposalId: String, newOrganizerId: String) {
         viewModelScope.launch {
-            val originalProposal = repository.getProposalById(sourceProposalId) ?: return@launch
 
-            organizerId.value = newOrganizerId
-            name.value = originalProposal.name
-            startDate.value = originalProposal.startDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
-            endDate.value = originalProposal.endDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
-            minPrice.value = originalProposal.minPrice.toFloat()
-            maxPrice.value = originalProposal.maxPrice.toFloat()
-            maxParticipantsAllowed.value = originalProposal.maxParticipants.toString()
-            typology.value = originalProposal.typology
-            description.value = originalProposal.description
-            suggestedActivities.value = originalProposal.suggestedActivities.toList()
-            itinerary.value = originalProposal.itinerary.toList()
-            imageUris.value = originalProposal.images.map { TravelImage.UriImage(it) }.toMutableStateList()
-            messages.value = emptyList()
-            _applicationIds.value = emptyList()
-            pendingApplicationsCount.value = 0
-            participantsCount.value = 0
-            status.value = "Published"
-            _creationSuccess.value = false
-            resetErrors()
+            _isLoading.value = true
+            try {
+                val originalProposal = repository.getProposalById(sourceProposalId)
+                if (originalProposal != null) {
+                    organizerId.value = newOrganizerId
+                    name.value = originalProposal.name
+                    startDate.value = originalProposal.startDate?.toDate()?.toInstant()
+                        ?.atZone(ZoneId.systemDefault())?.toLocalDate()
+                    endDate.value = originalProposal.endDate?.toDate()?.toInstant()
+                        ?.atZone(ZoneId.systemDefault())?.toLocalDate()
+                    minPrice.value = originalProposal.minPrice.toFloat()
+                    maxPrice.value = originalProposal.maxPrice.toFloat()
+                    maxParticipantsAllowed.value = originalProposal.maxParticipants.toString()
+                    typology.value = originalProposal.typology
+                    description.value = originalProposal.description
+                    suggestedActivities.value = originalProposal.suggestedActivities.toList()
+                    itinerary.value = originalProposal.itinerary.toList()
+                    imageUris.value = originalProposal.images.map { TravelImage.UriImage(it) }
+                        .toMutableStateList()
+                    messages.value = emptyList()
+                    _applicationIds.value = emptyList()
+                    pendingApplicationsCount.value = 0
+                    participantsCount.value = 0
+                    status.value = "Published"
+                    _creationSuccess.value = false
+                    resetErrors()
+                }
+            } catch (e: Exception) {
+                Log.e("LoadToEdit", "Error loading proposal $sourceProposalId for duplication", e)
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -426,19 +441,6 @@ class TravelProposalViewModel(
         this.organizerId.value = organizerId
     }
 
-    private val _ownedProposals = MutableStateFlow<List<TravelProposal>>(emptyList())
-    val ownedProposals: StateFlow<List<TravelProposal>> = _ownedProposals
-
-    fun startListeningProposals(userId: String) {
-        ownedListenerJob?.cancel()
-        ownedListenerJob = viewModelScope.launch {
-            repository.observeProposalsByOrganizer(userId)
-                .collect { proposals ->
-                    _ownedProposals.value = proposals.sortedByDescending { it.startDate }
-                }
-        }
-    }
-
     fun startListeningAllProposals() {
         if (exploreListenerJob?.isActive == true) {
             return
@@ -457,6 +459,25 @@ class TravelProposalViewModel(
                     }
 
                     if (proposalsList.isNotEmpty() || currentDetailProposalId == null) {
+                        _isLoading.value = false
+                    }
+                }
+        }
+    }
+
+    fun startListeningOwnedProposals(userId: String) {
+        if (ownedListenerJob?.isActive == true) {
+            return
+        }
+
+        ownedListenerJob?.cancel()
+        _isLoading.value = true
+        ownedListenerJob = viewModelScope.launch {
+            repository.observeProposalsByOrganizer(userId)
+                .collect { proposalsList ->
+                    _ownedProposals.value = proposalsList.sortedByDescending { it.startDate }
+
+                    if (proposalsList.isNotEmpty()) {
                         _isLoading.value = false
                     }
                 }
@@ -487,10 +508,6 @@ class TravelProposalViewModel(
         exploreListenerJob?.cancel()
         ownedListenerJob?.cancel()
     }
-}
-
-sealed class TravelImage {
-    data class UriImage(val uri: String) : TravelImage()
 }
 
 class TravelProposalViewModelFactory(
