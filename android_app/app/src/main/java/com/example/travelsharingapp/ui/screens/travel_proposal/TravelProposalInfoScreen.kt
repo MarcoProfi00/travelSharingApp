@@ -802,22 +802,23 @@ fun ItineraryStopListItemCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 12.dp, top = 8.dp)
             )
-            if (itineraryStop.description.isNotBlank()) {
-                Text(
-                    itineraryStop.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 12.dp)
-                )
-            }
+
+            Text(
+                itineraryStop.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp)
+            )
             Spacer(modifier = Modifier.height(4.dp))
+
             AssistChip(
                 onClick = { /* */ },
                 label = { Text(if (itineraryStop.isGroup) "Group Activity" else "Free Time") },
                 colors = AssistChipDefaults.assistChipColors(
                     containerColor = if (itineraryStop.isGroup) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
                     labelColor = if (itineraryStop.isGroup) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
-                )
+                ),
+                modifier = Modifier.padding(6.dp)
             )
         }
     }

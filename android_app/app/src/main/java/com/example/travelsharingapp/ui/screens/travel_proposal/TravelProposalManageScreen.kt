@@ -391,7 +391,7 @@ fun TravelNameField(
 
     OutlinedTextField(
         value = name,
-        onValueChange = { viewModel.name.value = it },
+        onValueChange = { viewModel.onNameChange(it) },
         isError = error != null,
         label = { Text("Travel Name", style = MaterialTheme.typography.bodySmall) },
         textStyle = MaterialTheme.typography.bodyLarge,
@@ -409,11 +409,7 @@ fun DescriptionField(viewModel: TravelProposalViewModel) {
     Column(modifier = Modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = description.value,
-            onValueChange = {
-                if (it.length <= maxChars) {
-                    viewModel.description.value = it
-                }
-            },
+            onValueChange = { viewModel.onDescriptionChange(it) },
             label = { Text("Description", style = MaterialTheme.typography.bodySmall) },
             textStyle = MaterialTheme.typography.bodyLarge,
             modifier = Modifier
@@ -422,18 +418,18 @@ fun DescriptionField(viewModel: TravelProposalViewModel) {
             singleLine = false,
             maxLines = 10,
             supportingText = {
-                Column {
-                    if (descriptionError != null) {
-                        Text(
-                            text = descriptionError ?: "",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = descriptionError ?: "",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
                     Text(
                         text = "${description.value.length} / $maxChars",
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.align(Alignment.End)
+                        style = MaterialTheme.typography.labelSmall
                     )
                 }
             }
@@ -486,7 +482,7 @@ fun TypologyDropdownMenu(viewModel: TravelProposalViewModel) {
                     DropdownMenuItem(
                         text = { Text(typology.toString()) },
                         onClick = {
-                            viewModel.typology.value = typology.name
+                            viewModel.onTypologyChange(typology.name)
                             expanded.value = false
                         }
                     )
@@ -540,7 +536,7 @@ fun DateRangeSelector(viewModel: TravelProposalViewModel) {
         if (dateError != null) {
             Text(
                 text = dateError ?: "",
-                color = Color.Red,
+                color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(top = 4.dp)
             )
@@ -555,10 +551,7 @@ fun DateRangeSelector(viewModel: TravelProposalViewModel) {
                     TextButton(onClick = {
                         val start = dateRangePickerState.selectedStartDateMillis?.let { formatDate(it) }
                         val end = dateRangePickerState.selectedEndDateMillis?.let { formatDate(it) }
-
-                        viewModel.startDate.value = start
-                        viewModel.endDate.value = end
-
+                        viewModel.onDatesChange(start, end)
                         showPicker.value = false
                     }) {
                         Text("OK")
@@ -588,39 +581,54 @@ fun formatDate(millis: Long): LocalDate {
 
 @Composable
 fun PriceRangeSelector(viewModel: TravelProposalViewModel) {
-    val min by viewModel.minPrice.collectAsState()
-    val max by viewModel.maxPrice.collectAsState()
+    val minPriceFromViewModel by viewModel.minPrice.collectAsState()
+    val maxPriceFromViewModel by viewModel.maxPrice.collectAsState()
     val priceError by viewModel.priceError.collectAsState()
+
+    var minPriceText by remember(minPriceFromViewModel) { mutableStateOf(minPriceFromViewModel.toInt().toString()) }
+    var maxPriceText by remember(maxPriceFromViewModel) { mutableStateOf(maxPriceFromViewModel.toInt().toString()) }
+
+    LaunchedEffect(minPriceFromViewModel) {
+        val vmMinString = minPriceFromViewModel.toInt().toString()
+        if (vmMinString != minPriceText) {
+            minPriceText = vmMinString
+        }
+    }
+
+    LaunchedEffect(maxPriceFromViewModel) {
+        val vmMaxString = maxPriceFromViewModel.toInt().toString()
+        if (vmMaxString != maxPriceText) {
+            maxPriceText = vmMaxString
+        }
+    }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Text("Price per person (€)", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 4.dp))
+
+        val sliderRangeStart = minOf(minPriceFromViewModel, maxPriceFromViewModel)
+        val sliderRangeEnd = maxOf(minPriceFromViewModel, maxPriceFromViewModel)
+
         RangeSlider(
-            value = min..max,
+            value = sliderRangeStart..sliderRangeEnd,
             onValueChange = { range ->
-                viewModel.minPrice.value = range.start
-                viewModel.maxPrice.value = range.endInclusive
+                viewModel.onMinPriceChange(range.start)
+                viewModel.onMaxPriceChange(range.endInclusive)
             },
             valueRange = 0f..10000f,
             steps = 0,
-//            colors = SliderDefaults.colors(
-//                thumbColor = MaterialTheme.colorScheme.primary,
-//                activeTrackColor = MaterialTheme.colorScheme.primary,
-//                inactiveTrackColor = MaterialTheme.colorScheme.secondary,
-//                activeTickColor = Color.Transparent,
-//                inactiveTickColor = Color.Transparent
-//            ),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
-                value = min.toInt().toString(),
-                onValueChange = {
-                    it.toFloatOrNull()?.let { value ->
-                        viewModel.minPrice.value = value.coerceIn(0f, viewModel.maxPrice.value)
+                value = minPriceText,
+                onValueChange = { newText ->
+                    minPriceText = newText
+                    newText.toFloatOrNull()?.let { parsedValue  ->
+                        viewModel.onMinPriceChange(parsedValue.coerceIn(0f, 10000f))
                     }
                 },
                 modifier = Modifier.weight(1f),
@@ -632,10 +640,11 @@ fun PriceRangeSelector(viewModel: TravelProposalViewModel) {
             )
 
             OutlinedTextField(
-                value = max.toInt().toString(),
-                onValueChange = {
-                    it.toFloatOrNull()?.let { value ->
-                        viewModel.maxPrice.value = value.coerceIn(viewModel.minPrice.value, 10000f)
+                value = maxPriceText,
+                onValueChange = { newText ->
+                    maxPriceText = newText
+                    newText.toFloatOrNull()?.let { parsedValue ->
+                        viewModel.onMaxPriceChange(parsedValue.coerceIn(0f, 10000f))
                     }
                 },
                 modifier = Modifier.weight(1f),
@@ -651,7 +660,7 @@ fun PriceRangeSelector(viewModel: TravelProposalViewModel) {
             Text(
                 text = priceError ?: "",
                 style = MaterialTheme.typography.labelSmall,
-                color = Color.Red,
+                color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
@@ -675,7 +684,7 @@ fun ParticipantsSelector(viewModel: TravelProposalViewModel) {
         ) {
             IconButton(onClick = {
                 val current = viewModel.maxParticipantsAllowed.value.toIntOrNull() ?: 0
-                if (current > 0) viewModel.maxParticipantsAllowed.value = (current - 1).toString()
+                if (current > 0) viewModel.onMaxParticipantsChange((current - 1).toString())
             }) {
                 Icon(Icons.Default.Remove, contentDescription = "Decrease")
             }
@@ -684,7 +693,7 @@ fun ParticipantsSelector(viewModel: TravelProposalViewModel) {
                 value = participants,
                 onValueChange = {
                     if (it.all { ch -> ch.isDigit() }) {
-                        viewModel.maxParticipantsAllowed.value = it
+                        viewModel.onMaxParticipantsChange(it)
                     }
                 },
                 modifier = Modifier.width(100.dp),
@@ -696,7 +705,7 @@ fun ParticipantsSelector(viewModel: TravelProposalViewModel) {
 
             IconButton(onClick = {
                 val current = viewModel.maxParticipantsAllowed.value.toIntOrNull() ?: 0
-                viewModel.maxParticipantsAllowed.value = (current + 1).toString()
+                viewModel.onMaxParticipantsChange((current + 1).toString())
             }) {
                 Icon(Icons.Default.Add, contentDescription = "Increase")
             }
@@ -705,7 +714,7 @@ fun ParticipantsSelector(viewModel: TravelProposalViewModel) {
         if (error != null) {
             Text(
                 text = error ?: "",
-                color = Color.Red,
+                color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(top = 4.dp)
             )
@@ -897,7 +906,7 @@ fun ItinerarySection(
         if (itineraryError != null) {
             Text(
                 text = itineraryError ?: "",
-                color = Color.Red,
+                color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(top = 4.dp, start = 4.dp)
             )
@@ -1280,12 +1289,14 @@ fun ItineraryList(
                         itinerary.place,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 12.dp, top = 8.dp)
                     )
                     Text(
                         itinerary.description,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 12.dp)
                     )
                     Spacer(modifier = Modifier.height(4.dp))
 
@@ -1300,7 +1311,8 @@ fun ItineraryList(
                             colors = AssistChipDefaults.assistChipColors(
                                 containerColor = if (itinerary.isGroup) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
                                 labelColor = if (itinerary.isGroup) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
-                            )
+                            ),
+                            modifier = Modifier.padding(6.dp)
                         )
 
                         Row {
@@ -1399,7 +1411,7 @@ fun ImagePickerSection(
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Delete",
-                                    tint = Color.Red
+                                    tint = MaterialTheme.colorScheme.error
                                 )
                             }
                         }

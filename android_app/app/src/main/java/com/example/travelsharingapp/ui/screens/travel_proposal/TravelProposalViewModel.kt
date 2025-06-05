@@ -16,6 +16,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
@@ -42,147 +46,297 @@ class TravelProposalViewModel(
     private val _currentDetailProposalId = MutableStateFlow<String?>(null)
     val currentDetailProposalId: StateFlow<String?> = _currentDetailProposalId.asStateFlow()
 
-    val name = MutableStateFlow("")
-    val startDate = MutableStateFlow<LocalDate?>(null)
-    val endDate = MutableStateFlow<LocalDate?>(null)
-    val minPrice = MutableStateFlow(0f)
-    val maxPrice = MutableStateFlow(10000f)
-    val maxParticipantsAllowed = MutableStateFlow("")
-    val typology = MutableStateFlow("")
-    val description = MutableStateFlow("")
-    val suggestedActivities = MutableStateFlow<List<String>>(emptyList())
-    val itinerary = MutableStateFlow<List<ItineraryStop>>(emptyList())
-    val organizerId = MutableStateFlow("")
-    val imageUris = MutableStateFlow<List<TravelImage>>(emptyList())
+    private val _name = MutableStateFlow("")
+    val name: StateFlow<String> = _name.asStateFlow()
+
+    private val _startDate = MutableStateFlow<LocalDate?>(null)
+    val startDate: StateFlow<LocalDate?> = _startDate.asStateFlow()
+
+    private val _endDate = MutableStateFlow<LocalDate?>(null)
+    val endDate: StateFlow<LocalDate?> = _endDate.asStateFlow()
+
+    private val _minPrice = MutableStateFlow(0f)
+    val minPrice: StateFlow<Float> = _minPrice.asStateFlow()
+
+    private val _maxPrice = MutableStateFlow(10000f)
+    val maxPrice: StateFlow<Float> = _maxPrice.asStateFlow()
+
+    private val _maxParticipantsAllowed = MutableStateFlow("")
+    val maxParticipantsAllowed: StateFlow<String> = _maxParticipantsAllowed.asStateFlow()
+
+    private val _typology = MutableStateFlow("")
+    val typology: StateFlow<String> = _typology.asStateFlow()
+
+    private val _description = MutableStateFlow("")
+    val description: StateFlow<String> = _description.asStateFlow()
+
+    private val _suggestedActivities = MutableStateFlow<List<String>>(emptyList())
+    val suggestedActivities: StateFlow<List<String>> = _suggestedActivities.asStateFlow()
+
+    private val _itinerary = MutableStateFlow<List<ItineraryStop>>(emptyList())
+    val itinerary: StateFlow<List<ItineraryStop>> = _itinerary.asStateFlow()
+
+    private val _organizerId = MutableStateFlow("")
+    val organizerId: StateFlow<String> = _organizerId.asStateFlow()
+
+    private val _imageUris = MutableStateFlow<List<TravelImage>>(emptyList())
+    val imageUris: StateFlow<List<TravelImage>> = _imageUris.asStateFlow()
+
     val messages = MutableStateFlow<List<Message>>(emptyList())
     val participantsCount = MutableStateFlow(0)
     val pendingApplicationsCount = MutableStateFlow(0)
     val status = MutableStateFlow("Published")
 
-    val nameError = MutableStateFlow<String?>(null)
-    val dateError = MutableStateFlow<String?>(null)
-    val priceError = MutableStateFlow<String?>(null)
-    val participantsError = MutableStateFlow<String?>(null)
-    val typologyError = MutableStateFlow<String?>(null)
-    val descriptionError = MutableStateFlow<String?>(null)
-    val suggestedActivitiesError = MutableStateFlow<String?>(null)
-    val itineraryError = MutableStateFlow<String?>(null)
-    val imageError = MutableStateFlow<String?>(null)
+    private val _nameError = MutableStateFlow<String?>(null)
+    val nameError: StateFlow<String?> = _nameError.asStateFlow()
+
+    private val _dateError = MutableStateFlow<String?>(null)
+    val dateError: StateFlow<String?> = _dateError.asStateFlow()
+
+    private val _priceError = MutableStateFlow<String?>(null)
+    val priceError: StateFlow<String?> = _priceError.asStateFlow()
+
+    private val _participantsError = MutableStateFlow<String?>(null)
+    val participantsError: StateFlow<String?> = _participantsError.asStateFlow()
+
+    private val _typologyError = MutableStateFlow<String?>(null)
+    val typologyError: StateFlow<String?> = _typologyError.asStateFlow()
+
+    private val _descriptionError = MutableStateFlow<String?>(null)
+    val descriptionError: StateFlow<String?> = _descriptionError.asStateFlow()
+
+    private val _suggestedActivitiesError = MutableStateFlow<String?>(null)
+    val suggestedActivitiesError: StateFlow<String?> = _suggestedActivitiesError.asStateFlow()
+
+    private val _itineraryError = MutableStateFlow<String?>(null)
+    val itineraryError: StateFlow<String?> = _itineraryError.asStateFlow()
+
+    private val _imageError = MutableStateFlow<String?>(null)
+    val imageError: StateFlow<String?> = _imageError.asStateFlow()
 
     private val _applicationIds = MutableStateFlow<List<String>>(emptyList())
     val applicationIds: StateFlow<List<String>> = _applicationIds
 
     private val _creationSuccess = MutableStateFlow(false)
-    //val creationSuccess: StateFlow<Boolean> = _creationSuccess
+    val creationSuccess: StateFlow<Boolean> = _creationSuccess
 
     private var ownedListenerJob: Job? = null
     private var exploreListenerJob: Job? = null
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    fun onNameChange(newName: String) { _name.value = newName }
+    fun onDescriptionChange(newDescription: String) {
+        if (newDescription.length <= 5000) _description.value = newDescription
+    }
+    fun onTypologyChange(newTypology: String) { _typology.value = newTypology }
+    fun onDatesChange(newStart: LocalDate?, newEnd: LocalDate?) {
+        _startDate.value = newStart
+        _endDate.value = newEnd
+    }
+    fun onMinPriceChange(newMinPrice: Float) {
+        _minPrice.value = newMinPrice
+        if (newMinPrice > _maxPrice.value) _maxPrice.value = newMinPrice
+    }
+    fun onMaxPriceChange(newMaxPrice: Float) {
+        _maxPrice.value = newMaxPrice
+        if (newMaxPrice < _minPrice.value) _minPrice.value = newMaxPrice
+    }
+    fun onMaxParticipantsChange(count: String) { _maxParticipantsAllowed.value = count }
+
+    init {
+        _name.debounce(300L).onEach { performNameValidation(it) }.launchIn(viewModelScope)
+        _description.debounce(300L).onEach { performDescriptionValidation(it) }.launchIn(viewModelScope)
+        _typology.onEach { performTypologyValidation(it) }.launchIn(viewModelScope)
+        combine(_startDate, _endDate) { start, end -> Pair(start, end) }
+            .onEach { (start, end) -> performDateValidation(start, end) }
+            .launchIn(viewModelScope)
+        combine(_minPrice, _maxPrice) { min, max -> Pair(min, max) }
+            .debounce(300L)
+            .onEach { (min, max) -> performPriceValidation(min, max) }
+            .launchIn(viewModelScope)
+        _maxParticipantsAllowed.debounce(300L).onEach { performParticipantsValidation(it) }.launchIn(viewModelScope)
+        _suggestedActivities.onEach { performSuggestedActivitiesValidation(it) }.launchIn(viewModelScope)
+        _itinerary.onEach { performItineraryValidation(it) }.launchIn(viewModelScope)
+        _imageUris.onEach { performImageUrisValidation(it) }.launchIn(viewModelScope)
+    }
+
+    private fun performNameValidation(currentName: String): Boolean {
+        return when {
+            currentName.isBlank() -> {
+                _nameError.value = "Name cannot be empty"
+                false
+            }
+            currentName.length < 2 -> {
+                _nameError.value = "Name must be at least 2 characters"
+                false
+            }
+            else -> {
+                _nameError.value = null
+                true
+            }
+        }
+    }
+
+    private fun performDateValidation(start: LocalDate?, end: LocalDate?): Boolean {
+        return when {
+            start == null || end == null -> {
+                _dateError.value = "Both start and end dates must be selected"
+                false
+            }
+            start.isAfter(end) -> {
+                _dateError.value = "Start date must be before end date"
+                false
+            }
+            start.isBefore(LocalDate.now()) -> {
+                _dateError.value = "Start date cannot be in the past"
+                false
+            }
+            else -> {
+                _dateError.value = null
+                true
+            }
+        }
+    }
+
+    private fun performPriceValidation(min: Float, max: Float): Boolean {
+        return if (min > max) {
+            _priceError.value = "Min price can't be higher than max price"
+            false
+        } else {
+            _priceError.value = null
+            true
+        }
+    }
+
+    private fun performParticipantsValidation(countStr: String): Boolean {
+        val count = countStr.toIntOrNull()
+        return when {
+            count == null || count <= 0 -> {
+                _participantsError.value = "Must be at least 1 participant"
+                false
+            }
+            else -> {
+                _participantsError.value = null
+                true
+            }
+        }
+    }
+
+    private fun performTypologyValidation(currentTypology: String): Boolean {
+        return if (currentTypology.isBlank()) {
+            _typologyError.value = "Typology cannot be empty"
+            false
+        } else {
+            _typologyError.value = null
+            true
+        }
+    }
+
+    private fun performDescriptionValidation(currentDesc: String): Boolean {
+        return when {
+            currentDesc.isBlank() -> {
+                _descriptionError.value = "Description cannot be empty"
+                false
+            }
+            currentDesc.length < 2 -> {
+                _descriptionError.value = "Description must be at least 2 characters"
+                false
+            }
+            else -> {
+                _descriptionError.value = null
+                true
+            }
+        }
+    }
+    private fun performSuggestedActivitiesValidation(activities: List<String>): Boolean {
+        return if (activities.isEmpty()) {
+            _suggestedActivitiesError.value = "At least one activity must be selected"
+            false
+        } else {
+            _suggestedActivitiesError.value = null
+            true
+        }
+    }
+
+    private fun performItineraryValidation(stops: List<ItineraryStop>): Boolean {
+        return if (stops.isEmpty()) {
+            _itineraryError.value = "Please add at least one itinerary stop"
+            false
+        } else {
+            _itineraryError.value = null
+            true
+        }
+    }
+    private fun performImageUrisValidation(uris: List<TravelImage>): Boolean {
+         if (uris.isEmpty()) {
+             _imageError.value = "At least one image is required."
+             return false
+         }
+        _imageError.value = null
+        return true
+    }
+
 
     fun validateFields(): Boolean {
-        var isValid = true
+        val isNameValid = performNameValidation(_name.value)
+        val isDateValid = performDateValidation(_startDate.value, _endDate.value)
+        val isPriceValid = performPriceValidation(_minPrice.value, _maxPrice.value)
+        val isParticipantsValid = performParticipantsValidation(_maxParticipantsAllowed.value)
+        val isTypologyValid = performTypologyValidation(_typology.value)
+        val isDescriptionValid = performDescriptionValidation(_description.value)
+        val isSuggestedActivitiesValid = performSuggestedActivitiesValidation(_suggestedActivities.value)
+        val isItineraryValid = performItineraryValidation(_itinerary.value)
+        val isImageValid = performImageUrisValidation(_imageUris.value)
 
-        if (name.value.isBlank()) {
-            nameError.value = "Name cannot be empty"
-            isValid = false
-        } else nameError.value = null
-
-        if (name.value.length < 2) {
-            nameError.value = "Name must be at least 2 characters"
-            isValid = false
-        } else nameError.value = null
-
-        if (startDate.value == null || endDate.value == null) {
-            dateError.value = "Both start and end dates must be selected"
-            isValid = false
-        } else if (startDate.value!!.isAfter(endDate.value)) {
-            dateError.value = "Start date must be before end date"
-            isValid = false
-        } else dateError.value = null
-
-        if (startDate.value != null && startDate.value!!.isBefore(LocalDate.now())) {
-            dateError.value = "Start date cannot be in the past"
-            isValid = false
+        if (_startDate.value != null && _startDate.value!!.isBefore(LocalDate.now())) {
+            _dateError.value = "Start date cannot be in the past"
         }
 
-        if (minPrice.value > maxPrice.value) {
-            priceError.value = "Min price can't be higher than max price"
-            isValid = false
-        } else priceError.value = null
-
-        if ((maxParticipantsAllowed.value.toIntOrNull() ?: 0) <= 0) {
-            participantsError.value = "Must be at least 1 participant"
-            isValid = false
-        } else participantsError.value = null
-
-        if (typology.value.isBlank()) {
-            typologyError.value = "Typology cannot be empty"
-            isValid = false
-        } else typologyError.value = null
-
-        if (description.value.length < 2) {
-            descriptionError.value = "Description must be at least 2 characters"
-            isValid = false
-        } else descriptionError.value = null
-
-        if (description.value.isBlank()) {
-            descriptionError.value = "Description cannot be empty"
-            isValid = false
-        } else descriptionError.value = null
-
-        if (suggestedActivities.value.isEmpty()) {
-            suggestedActivitiesError.value = "At least one activity must be selected"
-            isValid = false
-        } else suggestedActivitiesError.value = null
-
-        if (itinerary.value.isEmpty()) {
-            itineraryError.value = "Please add at least one itinerary"
-            isValid = false
-        } else itineraryError.value = null
-
-        return isValid
+        return isNameValid && isDateValid && isPriceValid && isParticipantsValid &&
+                isTypologyValid && isDescriptionValid && isSuggestedActivitiesValid &&
+                isItineraryValid && isImageValid
     }
 
     fun addSuggestedActivity(activity: String) {
         if (activity.isNotBlank()) {
-            suggestedActivities.value = suggestedActivities.value + activity
+            _suggestedActivities.value = _suggestedActivities.value + activity
         }
     }
 
     fun removeSuggestedActivity(activity: String) {
-        suggestedActivities.value = suggestedActivities.value - activity
+        _suggestedActivities.value = _suggestedActivities.value - activity
     }
 
     fun addItinerary(newItem: ItineraryStop) {
-        itinerary.value = itinerary.value + newItem
+        _itinerary.value = _itinerary.value + newItem
     }
 
     fun updateItinerary(index: Int, updatedItem: ItineraryStop) {
-        val currentList = itinerary.value.toMutableList()
+        val currentList = _itinerary.value.toMutableList()
         if (index in currentList.indices) {
             currentList[index] = updatedItem
-            itinerary.value = currentList
+            _itinerary.value = currentList
         }
     }
 
     fun removeItinerary(index: Int) {
-        if (index in itinerary.value.indices) {
-            itinerary.value = itinerary.value.toMutableList().apply {
+        if (index in _itinerary.value.indices) {
+            _itinerary.value = _itinerary.value.toMutableList().apply {
                 removeAt(index)
             }
         }
     }
 
     fun addImageUri(uri: String) {
-        if (imageUris.value.size < 5) {
-            imageUris.value = imageUris.value + TravelImage.UriImage(uri)
+        if (_imageUris.value.size < 5) {
+            _imageUris.value = _imageUris.value + TravelImage.UriImage(uri)
         }
     }
 
     fun removeImageUri(image: TravelImage) {
-        imageUris.value = imageUris.value - image
+        _imageUris.value = _imageUris.value - image
 
         if (image is TravelImage.UriImage) {
             val url = image.uri
@@ -326,18 +480,18 @@ class TravelProposalViewModel(
             try {
                 val proposal = repository.getProposalById(proposalId)
                 if (proposal != null) {
-                    name.value = proposal.name
-                    organizerId.value = proposal.organizerId
-                    startDate.value = proposal.startDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
-                    endDate.value = proposal.endDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
-                    minPrice.value = proposal.minPrice.toFloat()
-                    maxPrice.value = proposal.maxPrice.toFloat()
-                    maxParticipantsAllowed.value = proposal.maxParticipants.toString()
-                    typology.value = proposal.typology
-                    description.value = proposal.description
-                    suggestedActivities.value = proposal.suggestedActivities
-                    itinerary.value = proposal.itinerary
-                    imageUris.value = proposal.images.map { TravelImage.UriImage(it) }
+                    _name.value = proposal.name
+                    _organizerId.value = proposal.organizerId
+                    _startDate.value = proposal.startDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+                    _endDate.value = proposal.endDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+                    _minPrice.value = proposal.minPrice.toFloat()
+                    _maxPrice.value = proposal.maxPrice.toFloat()
+                    _maxParticipantsAllowed.value = proposal.maxParticipants.toString()
+                    _typology.value = proposal.typology
+                    _description.value = proposal.description
+                    _suggestedActivities.value = proposal.suggestedActivities
+                    _itinerary.value = proposal.itinerary
+                    _imageUris.value = proposal.images.map { TravelImage.UriImage(it) }
                     messages.value = proposal.messages
                     _applicationIds.value = proposal.applicationIds
                     pendingApplicationsCount.value = proposal.pendingApplicationsCount
@@ -360,20 +514,20 @@ class TravelProposalViewModel(
             try {
                 val originalProposal = repository.getProposalById(sourceProposalId)
                 if (originalProposal != null) {
-                    organizerId.value = newOrganizerId
-                    name.value = originalProposal.name
-                    startDate.value = originalProposal.startDate?.toDate()?.toInstant()
+                    _organizerId.value = newOrganizerId
+                    _name.value = originalProposal.name
+                    _startDate.value = originalProposal.startDate?.toDate()?.toInstant()
                         ?.atZone(ZoneId.systemDefault())?.toLocalDate()
-                    endDate.value = originalProposal.endDate?.toDate()?.toInstant()
+                    _endDate.value = originalProposal.endDate?.toDate()?.toInstant()
                         ?.atZone(ZoneId.systemDefault())?.toLocalDate()
-                    minPrice.value = originalProposal.minPrice.toFloat()
-                    maxPrice.value = originalProposal.maxPrice.toFloat()
-                    maxParticipantsAllowed.value = originalProposal.maxParticipants.toString()
-                    typology.value = originalProposal.typology
-                    description.value = originalProposal.description
-                    suggestedActivities.value = originalProposal.suggestedActivities.toList()
-                    itinerary.value = originalProposal.itinerary.toList()
-                    imageUris.value = originalProposal.images.map { TravelImage.UriImage(it) }
+                    _minPrice.value = originalProposal.minPrice.toFloat()
+                    _maxPrice.value = originalProposal.maxPrice.toFloat()
+                    _maxParticipantsAllowed.value = originalProposal.maxParticipants.toString()
+                    _typology.value = originalProposal.typology
+                    _description.value = originalProposal.description
+                    _suggestedActivities.value = originalProposal.suggestedActivities.toList()
+                    _itinerary.value = originalProposal.itinerary.toList()
+                    _imageUris.value = originalProposal.images.map { TravelImage.UriImage(it) }
                         .toMutableStateList()
                     messages.value = emptyList()
                     _applicationIds.value = emptyList()
@@ -392,44 +546,43 @@ class TravelProposalViewModel(
     }
 
     fun hasErrors(): Boolean {
-        return listOf(
-            nameError.value,
-            dateError.value,
-            priceError.value,
-            participantsError.value,
-            typologyError.value,
-            descriptionError.value,
-            suggestedActivitiesError.value,
-            itineraryError.value
-        ).any { it != null }
-
+        return _nameError.value != null ||
+                _dateError.value != null ||
+                _priceError.value != null ||
+                _participantsError.value != null ||
+                _typologyError.value != null ||
+                _descriptionError.value != null ||
+                _suggestedActivitiesError.value != null ||
+                _itineraryError.value != null ||
+                _imageError.value != null
     }
 
     fun resetErrors() {
-        nameError.value = null
-        dateError.value = null
-        priceError.value = null
-        participantsError.value = null
-        typologyError.value = null
-        descriptionError.value = null
-        suggestedActivitiesError.value = null
-        itineraryError.value = null
-        imageError.value = null
+        _nameError.value = null
+        _dateError.value = null
+        _priceError.value = null
+        _participantsError.value = null
+        _typologyError.value = null
+        _descriptionError.value = null
+        _suggestedActivitiesError.value = null
+        _itineraryError.value = null
+        _imageError.value = null
     }
 
     fun resetFields(organizerId: String) {
-        name.value = ""
-        startDate.value = null
-        endDate.value = null
-        minPrice.value = 0f
-        maxPrice.value = 1000f
-        maxParticipantsAllowed.value = "1"
-        typology.value = ""
-        description.value = ""
-        suggestedActivities.value = emptyList()
-        itinerary.value = emptyList()
-        imageUris.value = emptyList()
-        this.organizerId.value = organizerId
+        _name.value = ""
+        _startDate.value = null
+        _endDate.value = null
+        _minPrice.value = 0f
+        _maxPrice.value = 1000f
+        _maxParticipantsAllowed.value = "1"
+        _typology.value = ""
+        _description.value = ""
+        _suggestedActivities.value = emptyList()
+        _itinerary.value = emptyList()
+        _imageUris.value = emptyList()
+        _organizerId.value = organizerId
+        resetErrors()
     }
 
     fun startListeningAllProposals() {
