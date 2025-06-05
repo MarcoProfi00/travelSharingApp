@@ -18,8 +18,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Upcoming
@@ -30,6 +29,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
@@ -46,12 +46,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 
 import com.example.travelsharingapp.R
 import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.data.model.ProposalStatus
 import com.example.travelsharingapp.data.model.TravelProposal
+import com.example.travelsharingapp.ui.screens.main.AppRoutes
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
 import com.google.firebase.Timestamp
@@ -73,7 +75,8 @@ fun TravelProposalJoinedScreen(
     travelApplicationViewModel: TravelApplicationViewModel,
     topBarViewModel: TopBarViewModel,
     onNavigateToReviewPage: (String) -> Unit,
-    onNavigateToProposalInfo: (String) -> Unit
+    onNavigateToProposalInfo: (String) -> Unit,
+    navController: NavController
 ) {
     val tabs = listOf(
         TabItem("Upcoming", Icons.Filled.Upcoming),
@@ -112,7 +115,11 @@ fun TravelProposalJoinedScreen(
         topBarViewModel.setConfig(
             title = "Joined Proposals",
             navigationIcon = { /* nothing */ },
-            actions = { /* No specific actions for this screen */ }
+            actions = {
+                IconButton(onClick = { navController.navigate(AppRoutes.CHAT_LIST) }) {
+                    Icon(Icons.Default.Chat, contentDescription = "Chat")
+                }
+            }
         )
     }
 

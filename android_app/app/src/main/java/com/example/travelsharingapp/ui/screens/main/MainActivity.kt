@@ -76,7 +76,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
-import com.example.travelsharingapp.BuildConfig
+import com.example.travelsharingapp.data.repository.ChatRepository
 import com.example.travelsharingapp.data.repository.NotificationRepository
 import com.example.travelsharingapp.data.repository.ThemeRepository
 import com.example.travelsharingapp.data.repository.TravelApplicationRepository
@@ -93,6 +93,10 @@ import com.example.travelsharingapp.ui.screens.authentication.AuthSignupScreen
 import com.example.travelsharingapp.ui.screens.authentication.AuthState
 import com.example.travelsharingapp.ui.screens.authentication.AuthViewModel
 import com.example.travelsharingapp.ui.screens.authentication.AuthViewModelFactory
+import com.example.travelsharingapp.ui.screens.chat.ChatListScreen
+import com.example.travelsharingapp.ui.screens.chat.ChatRoomScreen
+import com.example.travelsharingapp.ui.screens.chat.ChatViewModel
+import com.example.travelsharingapp.ui.screens.chat.ChatViewModelFactory
 import com.example.travelsharingapp.ui.screens.notification.NotificationScreen
 import com.example.travelsharingapp.ui.screens.notification.NotificationViewModel
 import com.example.travelsharingapp.ui.screens.notification.NotificationViewModelFactory
@@ -131,6 +135,7 @@ import com.example.travelsharingapp.utils.LockScreenOrientation
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.net.PlacesClient
+import com.google.firebase.BuildConfig
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -177,6 +182,9 @@ object AppRoutes {
 
     const val NOTIFICATIONS = "notifications"
 
+    const val CHAT_LIST = "chatList"
+    const val CHAT_ROOM = "chat_room"
+
     fun initialProfileSetup(userId: String, email: String) = "initialProfileSetup/$userId/$email"
     fun userProfile(userId: String, isOwnProfile: Boolean) = "userProfile/$userId/$isOwnProfile"
     fun userReviewsViewAllScreen(userId: String) = "userReviews/$userId"
@@ -205,6 +213,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val NOTIFICATION_PERMISSION_REQUEST_DELAY_MS = 1500L
     }
+
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -336,6 +345,7 @@ fun AppContent(
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
+    val showBottomBar = remember { mutableStateOf(true) }
 
     // Lock screen on non-tablet devices
     if(!shouldUseTabletLayout())
@@ -565,13 +575,15 @@ fun AppContent(
                 }
             },
             bottomBar = {
-                if (!WindowInsets.isImeVisible && authState is AuthState.Authenticated && currentUser != null) {
-                    BottomNavigationBar(
-                        selectedTab = currentTab,
-                        onTabSelected = { currentTab = it },
-                        navController = navController,
-                        currentUserId = currentUser.uid
-                    )
+                if (showBottomBar.value) {
+                    if (!WindowInsets.isImeVisible && authState is AuthState.Authenticated && currentUser != null) {
+                        BottomNavigationBar(
+                            selectedTab = currentTab,
+                            onTabSelected = { currentTab = it },
+                            navController = navController,
+                            currentUserId = currentUser.uid
+                        )
+                    }
                 }
             },
             modifier = Modifier
@@ -811,7 +823,8 @@ fun AppContent(
                             },
                             onNavigateToTravelProposalEdit = { proposalId ->
                                 navController.navigate(AppRoutes.travelProposalEdit(proposalId))
-                            }
+                            },
+                            navController = navController
                         )
                     }
                 }
@@ -1015,6 +1028,7 @@ fun AppContent(
                                     AppRoutes.travelProposalInfo(proposalId)
                                 )
                             },
+                            navController = navController
                         )
                     }
                 }
@@ -1077,10 +1091,53 @@ fun AppContent(
                         )
                     }
                 }
+
+                //Chat
+                composable(AppRoutes.CHAT_LIST) {
+                    if (currentUser != null) {
+                        ChatListScreen(
+                            userId = currentUser.uid,
+                            travelProposalViewModel = travelProposalViewModel,
+                            travelApplicationViewModel = travelApplicationViewModel,
+                            onNavigateToChat = { proposalId ->
+                                navController.navigate("${AppRoutes.CHAT_ROOM}/$proposalId")
+                            },
+                            onNavigateBack = {
+                                navController.popBackStack()
+                            },
+                            topBarViewModel = topBarViewModel
+                        )
+                    }
+                }
+
+                composable("${AppRoutes.CHAT_ROOM}/{proposalId}",
+                    arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val proposalId = backStackEntry.arguments?.getString("proposalId") ?: return@composable
+
+                    val chatViewModel: ChatViewModel = viewModel(
+                        factory = ChatViewModelFactory(ChatRepository())
+                    )
+
+                    if (currentUser != null) {
+                        ChatRoomScreen(
+                            proposalId = proposalId,
+                            userId = currentUser.uid,
+                            userName = currentUser.displayName ?: "Anonymous",
+                            chatViewModel = chatViewModel,
+                            topBarViewModel = topBarViewModel,
+                            onNavigateBack = { navController.popBackStack() },
+                            showBottomBar = showBottomBar
+                        )
+                    }
+                }
+
             }
         }
     } else {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background))
     }
 }
 

@@ -36,4 +36,5 @@ class TopBarViewModel : ViewModel() {
     fun setVisible(isVisible: Boolean) {
         _config.value = _config.value.copy(isVisible = isVisible)
     }
+
 }

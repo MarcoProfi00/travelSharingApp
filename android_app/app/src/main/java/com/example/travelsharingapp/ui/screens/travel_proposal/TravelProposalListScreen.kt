@@ -127,12 +127,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.travelsharingapp.R
 import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.data.model.ProposalStatus
 import com.example.travelsharingapp.data.model.TravelProposal
 import com.example.travelsharingapp.data.model.Typology
+import com.example.travelsharingapp.ui.screens.main.AppRoutes
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
@@ -160,7 +162,8 @@ fun TravelProposalListScreen(
     topBarViewModel: TopBarViewModel,
     onNavigateToChat: () -> Unit,
     onNavigateToTravelProposalInfo: (String) -> Unit,
-    onNavigateToTravelProposalEdit: (String) -> Unit
+    onNavigateToTravelProposalEdit: (String) -> Unit,
+    navController: NavController
 ) {
     val configuration = LocalConfiguration.current
     val scope = rememberCoroutineScope()
@@ -310,6 +313,9 @@ fun TravelProposalListScreen(
             actions = {
                 IconButton(onClick = { onNavigateToChat() }) {
                     Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Chat")
+                }
+                IconButton(onClick = { navController.navigate(AppRoutes.CHAT_LIST) }) {
+                    Icon(Icons.Default.Chat, contentDescription = "Chat")
                 }
             },
             floatingActionButton = { /* nothing */ }

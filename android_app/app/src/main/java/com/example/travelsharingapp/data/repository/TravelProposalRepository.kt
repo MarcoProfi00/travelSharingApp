@@ -52,6 +52,21 @@ class TravelProposalRepository(private val context: Context) {
         return snapshot.toObject(TravelProposal::class.java)
     }
 
+    fun getProposalsByOrganizer(userId: String, onResult: (List<TravelProposal>) -> Unit) {
+        FirebaseFirestore.getInstance()
+            .collection("travelProposals")
+            .whereEqualTo("organizerId", userId)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val proposals = snapshot.toObjects(TravelProposal::class.java)
+                onResult(proposals)
+            }
+            .addOnFailureListener {
+                onResult(emptyList())
+            }
+    }
+
+
     private suspend fun uploadProposalImagesToFirebase(
         proposalId: String,
         imageUrisToUpload: List<Uri>
