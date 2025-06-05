@@ -18,9 +18,13 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Upcoming
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -46,13 +50,17 @@ import coil.compose.AsyncImage
 
 import com.example.travelsharingapp.R
 import com.example.travelsharingapp.data.model.ApplicationStatus
+import com.example.travelsharingapp.data.model.ProposalStatus
 import com.example.travelsharingapp.data.model.TravelProposal
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.time.temporal.ChronoUnit
 
 data class TabItem(val title: String, val icon: ImageVector)
 
@@ -91,12 +99,12 @@ fun TravelProposalJoinedScreen(
 
     val today = LocalDate.now()
     val futureProposals = joinedProposals.filter {
-        it.startDate?.toDate()?.toInstant()?.atZone(java.time.ZoneId.systemDefault())?.toLocalDate()
+        it.startDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
             ?.isAfter(today) == true
     }
 
     val pastProposals = joinedProposals.filter {
-        val endDate = it.endDate?.toDate()?.toInstant()?.atZone(java.time.ZoneId.systemDefault())?.toLocalDate()
+        val endDate = it.endDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
         endDate != null && (endDate.isBefore(today) || endDate.isEqual(today))
     }
 
@@ -104,7 +112,7 @@ fun TravelProposalJoinedScreen(
         topBarViewModel.setConfig(
             title = "Joined Proposals",
             navigationIcon = { /* nothing */ },
-            actions = { /* No specific actions for this screen*/ }
+            actions = { /* No specific actions for this screen */ }
         )
     }
 
@@ -148,6 +156,7 @@ fun TravelProposalJoinedScreen(
         ) { page ->
             val proposalsToDisplay = if (page == 0) futureProposals else pastProposals
             val emptyMessage = if (page == 0) "No Upcoming trips found." else "No Concluded trips found."
+            val isUpcomingList = page == 0
 
             if (proposalsToDisplay.isEmpty()) {
                 Box(
@@ -170,6 +179,7 @@ fun TravelProposalJoinedScreen(
                             JoinedTravelProposalCard(
                                 modifier = Modifier.fillMaxWidth(),
                                 proposal = travelProposal,
+                                isUpcoming = isUpcomingList,
                                 onClick = { onNavigateToProposalInfo(travelProposal.proposalId) },
                                 onReviewClick = { onNavigateToReviewPage(travelProposal.proposalId) }
                             )
@@ -185,96 +195,218 @@ fun TravelProposalJoinedScreen(
 fun JoinedTravelProposalCard(
     modifier: Modifier,
     proposal: TravelProposal,
+    isUpcoming: Boolean,
     onClick: () -> Unit,
     onReviewClick: () -> Unit
 ) {
+    val travelStatus = determineTravelDisplayStatus(
+        proposal = proposal,
+        isContextUpcoming = isUpcoming
+    )
+
     ElevatedCard(
-        modifier = modifier.height(160.dp),
+        modifier = modifier.fillMaxWidth().height(160.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         onClick = onClick
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            if (proposal.images.isNotEmpty()) {
-                val banners = proposal.images.mapIndexed { index, item ->
-                    BannerModel(
-                        imageUrl = item,
-                        contentDescription = "Image ${index + 1}"
+            Box(modifier = Modifier
+                .width(140.dp)
+                .fillMaxHeight()
+            ) {
+                if (proposal.images.isNotEmpty()) {
+                    val banners = proposal.images.mapIndexed { index, item ->
+                        BannerModel(
+                            imageUrl = item,
+                            contentDescription = "Image ${index + 1}"
+                        )
+                    }
+
+                    BannerCarouselWidget(
+                        banners = banners,
+                        modifier = Modifier.fillMaxSize(),
+                        pageSpacing = 0.dp,
+                        contentPadding = PaddingValues(0.dp)
+                    )
+                } else {
+                    AsyncImage(
+                        model = R.drawable.placeholder_error,
+                        contentDescription = "Destination image",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
-
-                BannerCarouselWidget(
-                    banners = banners,
-                    modifier = Modifier
-                        .width(140.dp)
-                        .fillMaxHeight(),
-                    pageSpacing = 0.dp,
-                    contentPadding = PaddingValues(0.dp)
-                )
-            } else {
-                AsyncImage(
-                    model = R.drawable.placeholder_error,
-                    contentDescription = "Destination image",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(140.dp)
-                        .fillMaxHeight()
-                )
             }
 
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp)
-                    .padding(vertical = 8.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .weight(1f)
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = proposal.name,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1
+                    maxLines = 2
                 )
 
-                val formattedDate = proposal.startDate
-                    ?.toDate()
-                    ?.toInstant()
-                    ?.atZone(java.time.ZoneId.systemDefault())
-                    ?.toLocalDate()
-                    ?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)) ?: "No date"
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Event,
+                        contentDescription = "Date",
+                        modifier = Modifier.height(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    val dateToDisplay = if (travelStatus is TravelDisplayStatus.Upcoming || travelStatus is TravelDisplayStatus.Ongoing) {
+                        proposal.startDate.toLocalDateOrNull()
+                    } else {
+                        proposal.endDate.toLocalDateOrNull() ?: proposal.startDate.toLocalDateOrNull()
+                    }
+                    val formattedDate = dateToDisplay
+                        ?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)) ?: "Date not set"
+                    Text(
+                        text = formattedDate,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
 
-                Text(
-                    text = formattedDate,
-                    style = MaterialTheme.typography.bodySmall
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.Group,
+                        contentDescription = "Participants",
+                        modifier = Modifier.height(16.dp),
+                        tint = MaterialTheme.colorScheme.secondary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${proposal.participantsCount} / ${proposal.maxParticipants} joined",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
 
-                Text(
-                    text = "${proposal.participantsCount}/${proposal.maxParticipants} joined",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AssistChip(
+                        onClick = { /* */ },
+                        label = { Text(travelStatus.displayText, style = MaterialTheme.typography.labelMedium) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = travelStatus.getContainerColor(),
+                            labelColor = travelStatus.getLabelColor()
+                        ),
+                        border = null
+                    )
 
-                if (proposal.status == "Concluded") {
-                    Button(
-                        onClick = onReviewClick,
-                        modifier = Modifier.align(Alignment.End),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = Color(0xFFFFC107)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Reviews")
+
+                    if (!isUpcoming && proposal.statusEnum == ProposalStatus.Concluded) {
+                        Button(
+                            onClick = onReviewClick,
+                            modifier = Modifier,
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = "Review",
+                                    tint = Color(0xFFFFC107)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Review", style = MaterialTheme.typography.labelMedium)
+                            }
                         }
+                    } else {
+                        Spacer(modifier = Modifier.height(0.dp))
                     }
                 }
             }
         }
     }
+}
+
+sealed class TravelDisplayStatus(val displayText: String) {
+    @Composable
+    abstract fun getContainerColor(): Color
+    @Composable
+    abstract fun getLabelColor(): Color
+
+    object Concluded : TravelDisplayStatus("Concluded") {
+        @Composable override fun getContainerColor() = MaterialTheme.colorScheme.primaryContainer
+        @Composable override fun getLabelColor() = MaterialTheme.colorScheme.onPrimaryContainer
+    }
+
+    object Ongoing : TravelDisplayStatus("Ongoing") {
+        @Composable override fun getContainerColor() = MaterialTheme.colorScheme.tertiaryContainer
+        @Composable override fun getLabelColor() = MaterialTheme.colorScheme.onTertiaryContainer
+    }
+
+    data class Upcoming(val countdown: String) : TravelDisplayStatus(countdown) {
+        @Composable override fun getContainerColor() = MaterialTheme.colorScheme.tertiaryContainer
+        @Composable override fun getLabelColor() = MaterialTheme.colorScheme.onTertiaryContainer
+    }
+
+    data class Unknown(val reason: String = "Status N/A") : TravelDisplayStatus(reason) {
+        @Composable override fun getContainerColor() = MaterialTheme.colorScheme.secondaryContainer
+        @Composable override fun getLabelColor() = MaterialTheme.colorScheme.onSecondaryContainer
+    }
+}
+
+fun Timestamp?.toLocalDateOrNull(): LocalDate? {
+    return this?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+}
+
+@Composable
+fun determineTravelDisplayStatus(
+    proposal: TravelProposal,
+    isContextUpcoming: Boolean,
+    today: LocalDate = LocalDate.now()
+): TravelDisplayStatus {
+    val startDate = proposal.startDate.toLocalDateOrNull()
+    val endDate = proposal.endDate.toLocalDateOrNull()
+
+    if (proposal.status == "Concluded") {
+        return TravelDisplayStatus.Concluded
+    }
+
+    if (startDate != null && !startDate.isAfter(today)) {
+        if (endDate == null || !endDate.isBefore(today)) {
+            return TravelDisplayStatus.Ongoing
+        }
+        if (endDate.isBefore(today)) {
+            return TravelDisplayStatus.Concluded
+        }
+    }
+
+    if (startDate != null && startDate.isAfter(today)) {
+        val daysUntil = ChronoUnit.DAYS.between(today, startDate)
+        val weeksUntil = ChronoUnit.WEEKS.between(today, startDate)
+        val monthsUntil = ChronoUnit.MONTHS.between(today, startDate)
+
+        val countdownText = when {
+            monthsUntil >= 1 -> "In $monthsUntil months"
+            weeksUntil >= 1 -> "In $weeksUntil weeks"
+            daysUntil > 1 -> "In $daysUntil days"
+            daysUntil == 1L -> "Tomorrow"
+            else -> "Upcoming"
+        }
+        return TravelDisplayStatus.Upcoming(countdownText)
+    }
+
+    if (!isContextUpcoming) {
+        return TravelDisplayStatus.Concluded
+    }
+
+    val unknownReason = when {
+        startDate == null && endDate == null -> "Dates N/A"
+        startDate == null -> "Start Date N/A"
+        else -> "Status Unclear"
+    }
+    return TravelDisplayStatus.Unknown(unknownReason)
 }

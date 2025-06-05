@@ -37,7 +37,6 @@ class UserReviewViewModel(
         reviewListener = repository.observeReviewsForProposal(proposalId) { updatedReviews ->
             _proposalReviews.value = updatedReviews
         }
-
     }
 
     fun addReview(review: UserReview, callback: (UserProfile?) -> Unit) {
@@ -93,7 +92,6 @@ class UserReviewViewModel(
         viewModelScope.launch {
             repository.deleteReview(reviewToDelete.reviewId)
 
-
             val userProfile = userProfileRepository.getUserProfile(reviewToDelete.reviewedUserId)
             if (userProfile != null) {
                 val newNumberOfReviews = userProfile.numberOfReviews - 1
@@ -119,7 +117,6 @@ class UserReviewViewModel(
         super.onCleared()
         reviewListener?.remove()
     }
-
 }
 
 
