@@ -52,7 +52,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
@@ -534,7 +533,7 @@ fun BannerCarouselWidget(
             horizontalArrangement = Arrangement.Center
         ) {
             repeat(pagerState.pageCount) { iteration ->
-                val color = if (pagerState.currentPage == iteration) Color.DarkGray else Color.LightGray
+                val color = if (pagerState.currentPage == iteration) Color.White else Color.Black
                 Box(
                     modifier = Modifier
                         .padding(2.dp)
@@ -566,60 +565,57 @@ fun TravelHeaderSection(
             banners = banners,
             modifier = Modifier.fillMaxWidth(),
             pageSpacing = 8.dp,
-            contentPadding = PaddingValues(horizontal = 16.dp)
+            contentPadding = PaddingValues(horizontal = 0.dp)
         )
 
-        Row(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.Top
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.DateRange,
-                        contentDescription = "Travel dates",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                    Text("${proposal.startDate?.toDate()?.let { formatter.format(it) }} - ${proposal.endDate?.toDate()?.let { formatter.format(it) }}")
+                BoxWithConstraints {
+                    val showText = this.maxWidth > 100.dp
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        organizer?.let { org ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable { onOrganizerClick(org.userId) }
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                ProfileAvatar(
+                                    imageSize = 36.dp,
+                                    user = org,
+                                    onClick = { onOrganizerClick(org.userId) }
+                                )
+                                if (showText) {
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "${org.firstName} ${org.lastName}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.PriceChange,
-                        contentDescription = "Price range",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("€${proposal.minPrice} - €${proposal.maxPrice}")
-                }
+                Spacer(modifier = Modifier.weight(1f))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Filled.Group,
-                        contentDescription = "Participants",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("${proposal.participantsCount} / ${proposal.maxParticipants} participants")
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            BoxWithConstraints {
-                val showText = this.maxWidth > 100.dp
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                BoxWithConstraints {
+                    val showText = this.maxWidth > 100.dp
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
@@ -638,33 +634,38 @@ fun TravelHeaderSection(
                             }
                         }
                     }
-
-                    organizer?.let { org ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .clickable { onOrganizerClick(org.userId) }
-                                .padding(vertical = 4.dp, horizontal = if (showText) 8.dp else 4.dp)
-                        ) {
-                            ProfileAvatar(
-                                imageSize = 36.dp,
-                                user = org,
-                                onClick = { onOrganizerClick(org.userId) }
-                            )
-                            if (showText) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "${org.firstName} ${org.lastName}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
                 }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.DateRange,
+                    contentDescription = "Travel dates",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                Text("${proposal.startDate?.toDate()?.let { formatter.format(it) }} - ${proposal.endDate?.toDate()?.let { formatter.format(it) }}")
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.Group,
+                    contentDescription = "Participants",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("${proposal.participantsCount} / ${proposal.maxParticipants} participants")
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.PriceChange,
+                    contentDescription = "Price range",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("€${proposal.minPrice} - €${proposal.maxPrice}")
             }
         }
     }
@@ -798,13 +799,15 @@ fun ItineraryStopListItemCard(
                 itineraryStop.place,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 12.dp, top = 8.dp)
             )
             if (itineraryStop.description.isNotBlank()) {
                 Text(
                     itineraryStop.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 12.dp)
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))

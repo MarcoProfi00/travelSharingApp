@@ -38,12 +38,6 @@ enum class EditableProfileField {
     PhoneNumber
 }
 
-enum class UserProfileUiState {
-    Loading,
-    Loaded,
-    Error
-}
-
 class UserProfileViewModel(
     private val userRepository: UserRepository
 ) : ViewModel() {

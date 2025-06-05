@@ -22,19 +22,6 @@ class UserReviewRepository() {
         }
     }
 
-    suspend fun getReviewsForProposal(proposalId: String): List<UserReview> {
-        return try {
-            val snapshot = reviewsCollection.whereEqualTo("proposalId", proposalId).get().await()
-            snapshot.documents.mapNotNull {
-                it.toObject(UserReview::class.java)?.apply {
-                    reviewId = it.id
-                }
-            }
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
-
     fun observeReviewsForProposal(
         proposalId: String,
         onDataChange: (List<UserReview>) -> Unit
@@ -48,8 +35,6 @@ class UserReviewRepository() {
                 onDataChange(reviews)
             }
     }
-
-
 
     suspend fun addReview(review: UserReview): Boolean {
         return try {

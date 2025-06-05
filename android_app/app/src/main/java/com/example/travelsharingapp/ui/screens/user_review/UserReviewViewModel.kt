@@ -30,12 +30,6 @@ class UserReviewViewModel(
         }
     }
 
-    fun loadReviewsForProposal(proposalId: String) {
-        viewModelScope.launch {
-            _proposalReviews.value = repository.getReviewsForProposal(proposalId)
-        }
-    }
-
     private var reviewListener: ListenerRegistration? = null
 
     fun observeReviewsForProposal(proposalId: String) {

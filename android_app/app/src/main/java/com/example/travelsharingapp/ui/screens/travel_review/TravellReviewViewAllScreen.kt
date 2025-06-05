@@ -2,7 +2,6 @@
 package com.example.travelsharingapp.ui.screens.travel_review
 
 import android.content.res.Configuration
-import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement

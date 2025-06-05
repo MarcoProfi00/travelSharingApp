@@ -67,16 +67,6 @@ class UserRepository() {
         }
     }
 
-    suspend fun getAllUserProfiles(): List<UserProfile> {
-        return try {
-            val snapshot = usersCollection.get().await()
-            snapshot.documents.mapNotNull { it.toObject(UserProfile::class.java) }
-        } catch (e: Exception) {
-            Log.e("UserRepository", "Error getting all user profiles", e)
-            emptyList()
-        }
-    }
-
     suspend fun updateUserProfile(userProfile: UserProfile): Boolean {
         return try {
             usersCollection.document(userProfile.userId).set(userProfile).await()

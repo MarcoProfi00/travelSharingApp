@@ -39,11 +39,11 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.filled.BeachAccess
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
@@ -309,7 +309,7 @@ fun TravelProposalListScreen(
             navigationIcon = { /* nothing */ },
             actions = {
                 IconButton(onClick = { onNavigateToChat() }) {
-                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "Chat")
+                    Icon(Icons.Default.ChatBubbleOutline, contentDescription = "Chat")
                 }
             },
             floatingActionButton = { /* nothing */ }
