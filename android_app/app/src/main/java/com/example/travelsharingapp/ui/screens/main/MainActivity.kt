@@ -659,7 +659,7 @@ fun AppContent(
                                         popUpTo(navController.graph.findNode(AppRoutes.INITIAL_PROFILE_SETUP + "/{userId}/{email}")!!.id) { inclusive = true }
                                     }
                                 }
-                                authViewModel.signOut(userProfileViewModel, context)
+                                authViewModel.signOut(userProfileViewModel, travelProposalViewModel, context)
                             }
                         )
                     } else {
@@ -700,7 +700,7 @@ fun AppContent(
                         onNavigateToChangePassword = { navController.navigate(AppRoutes.CHANGE_PASSWORD) },
                         onNavigateToDeleteAccount = { navController.navigate(AppRoutes.DELETE_ACCOUNT) },
                         onNavigateToEditAccount = { navController.navigate(AppRoutes.EDIT_PROFILE) },
-                        onLogout = { authViewModel.signOut(userProfileViewModel, context) },
+                        onLogout = { authViewModel.signOut(userProfileViewModel, travelProposalViewModel, context) },
                         onBack = { navController.popBackStack() }
                     )
                 }
@@ -720,6 +720,7 @@ fun AppContent(
                         topBarViewModel = topBarViewModel,
                         authViewModel = authViewModel,
                         userProfileViewModel = userProfileViewModel,
+                        travelProposalViewModel = travelProposalViewModel,
                         onAccountDeletedSuccessfully = { navController.navigate(AppRoutes.LOGIN) },
                         onBack = { navController.popBackStack() }
                     )

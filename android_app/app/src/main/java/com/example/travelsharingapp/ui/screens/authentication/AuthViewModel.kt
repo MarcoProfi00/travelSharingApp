@@ -21,6 +21,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.travelsharingapp.data.repository.AuthPreferenceKeys
 import com.example.travelsharingapp.data.repository.UserRepository
 import com.example.travelsharingapp.data.repository.dataStoreInstance
+import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalViewModel
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
 import com.example.travelsharingapp.utils.FcmTokenManager
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
@@ -535,7 +536,10 @@ class AuthViewModel(
             }
     }
 
-    fun signOut(userProfileViewModel: UserProfileViewModel,context: Context) {
+    fun signOut(
+        userProfileViewModel: UserProfileViewModel,
+        travelProposalViewModel: TravelProposalViewModel,
+        context: Context) {
         val userIdToSignOut = firebaseAuth.currentUser?.uid
 
         if (userIdToSignOut != null) {
@@ -547,6 +551,7 @@ class AuthViewModel(
         }
 
         userProfileViewModel.clearUserSessionData()
+        travelProposalViewModel.clearTravelProposalData()
     }
 
     private fun performFirebaseSignOut(context: Context, signedOutUserId: String?, tokenWasHandled: Boolean) {
@@ -622,7 +627,11 @@ class AuthViewModel(
         _passwordChangeState.value = PasswordChangeState.Idle
     }
 
-    fun deleteCurrentUserAccount(userProfileViewModel: UserProfileViewModel, currentPassword: String, context: Context) {
+    fun deleteCurrentUserAccount(
+        userProfileViewModel: UserProfileViewModel,
+        travelProposalViewModel: TravelProposalViewModel,
+        currentPassword: String,
+        context: Context) {
         _accountDeleteState.value = AccountDeleteState.Loading
         val user = firebaseAuth.currentUser
 
@@ -643,7 +652,7 @@ class AuthViewModel(
                     user.delete()
                         .addOnCompleteListener { deleteTask ->
                             if (deleteTask.isSuccessful) {
-                                signOut(userProfileViewModel, context)
+                                signOut(userProfileViewModel, travelProposalViewModel, context)
                                 _accountDeleteState.value = AccountDeleteState.Success("Account deleted successfully.")
                             } else {
                                 if (deleteTask.exception is FirebaseAuthRecentLoginRequiredException) {

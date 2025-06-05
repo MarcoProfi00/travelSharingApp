@@ -467,10 +467,7 @@ class TravelProposalViewModel(
             repository.observeProposalsByOrganizer(userId)
                 .collect { proposalsList ->
                     _ownedProposals.value = proposalsList.sortedByDescending { it.startDate }
-
-                    if (proposalsList.isNotEmpty()) {
-                        _isLoading.value = false
-                    }
+                    _isLoading.value = false
                 }
         }
     }
@@ -505,10 +502,19 @@ class TravelProposalViewModel(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
+    fun clearTravelProposalData() {
         exploreListenerJob?.cancel()
         ownedListenerJob?.cancel()
+
+        _allProposals.value = emptyList()
+        _ownedProposals.value = emptyList()
+        _selectedProposal.value = null
+        _currentDetailProposalId.value = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        clearTravelProposalData()
     }
 }
 
