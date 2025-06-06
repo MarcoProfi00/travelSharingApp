@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.travelsharingapp.data.model.Notification
 import com.example.travelsharingapp.data.repository.NotificationRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,11 +19,20 @@ class NotificationViewModel(
     private val _notifications = MutableStateFlow<List<Notification>>(emptyList())
     val notifications: StateFlow<List<Notification>> = _notifications.asStateFlow()
 
-    fun loadNotifications(userId: String) {
-        viewModelScope.launch {
-            repository.getNotificationsForUser(userId).collect { notificationsList ->
-                _notifications.value = notificationsList
-            }
+    private var notificationListenerJob: Job? = null
+
+    fun startListeningNotificationsForUser(userId: String) {
+        if (notificationListenerJob?.isActive == true) {
+            return
+        }
+
+        notificationListenerJob?.cancel()
+
+        notificationListenerJob = viewModelScope.launch {
+            repository.observeNotificationsForUser(userId)
+                .collect { notificationsList ->
+                    _notifications.value = notificationsList
+                }
         }
     }
 
@@ -46,6 +56,15 @@ class NotificationViewModel(
                 Log.e("NotifVM", "Failed to delete notification $notificationId for user $userId", e)
             }
         }
+    }
+
+    fun clearNotificationData() {
+        notificationListenerJob?.cancel()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        clearNotificationData()
     }
 }
 

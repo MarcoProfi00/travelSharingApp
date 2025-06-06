@@ -56,8 +56,7 @@ fun DeleteAccountScreen(
     modifier: Modifier = Modifier,
     topBarViewModel: TopBarViewModel,
     authViewModel: AuthViewModel,
-    userProfileViewModel: UserProfileViewModel,
-    travelProposalViewModel: TravelProposalViewModel,
+    clearAllSessionData: () -> Unit,
     onAccountDeletedSuccessfully: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -193,7 +192,7 @@ fun DeleteAccountScreen(
                         Button(
                             onClick = {
                                 showConfirmationDialog = false
-                                authViewModel.deleteCurrentUserAccount(userProfileViewModel, travelProposalViewModel, currentPassword, context)
+                                authViewModel.deleteCurrentUserAccount(currentPassword, context, clearAllSessionData = clearAllSessionData)
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                         ) {

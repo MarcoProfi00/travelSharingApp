@@ -58,9 +58,13 @@ class UserReviewViewModel(
         }
     }
 
+    fun clearUserReviewData() {
+        reviewListenerJob?.cancel()
+    }
+
     override fun onCleared() {
         super.onCleared()
-        reviewListenerJob?.cancel()
+        clearUserReviewData()
     }
 }
 

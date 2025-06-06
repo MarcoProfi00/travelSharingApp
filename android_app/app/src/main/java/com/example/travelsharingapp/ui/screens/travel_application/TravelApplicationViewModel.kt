@@ -74,10 +74,14 @@ class TravelApplicationViewModel(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
+    fun clearTravelApplicationData() {
         userApplicationsJob?.cancel()
         proposalApplicationsJob?.cancel()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        clearTravelApplicationData()
     }
 }
 

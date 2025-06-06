@@ -49,7 +49,7 @@ fun NotificationScreen(
     val notifications by notificationsViewModel.notifications.collectAsState()
 
     LaunchedEffect(currentUserId) {
-        notificationsViewModel.loadNotifications(currentUserId)
+        notificationsViewModel.startListeningNotificationsForUser(currentUserId)
     }
 
     LaunchedEffect(Unit) {

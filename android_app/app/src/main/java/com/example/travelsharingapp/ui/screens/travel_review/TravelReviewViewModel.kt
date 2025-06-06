@@ -34,9 +34,13 @@ class TravelReviewViewModel(
         }
     }
 
+    fun clearTravelReviewData() {
+        reviewListenerJob?.cancel()
+    }
+
     override fun onCleared() {
         super.onCleared()
-        reviewListenerJob?.cancel()
+        clearTravelReviewData()
     }
 
     fun addReview(proposalId: String, review: TravelProposalReview) {

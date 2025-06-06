@@ -344,7 +344,6 @@ fun AppContent(
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // Lock screen on non-tablet devices
     if(!shouldUseTabletLayout())
         LockScreenOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
 
@@ -397,6 +396,16 @@ fun AppContent(
 
     var currentTab by rememberSaveable { mutableStateOf(BottomTab.Explore) }
     val backStackEntry by navController.currentBackStackEntryAsState()
+
+    val clearAllSessionData: () -> Unit = {
+        userProfileViewModel.clearUserSessionData()
+        travelProposalViewModel.clearTravelProposalData()
+        travelApplicationViewModel.clearTravelApplicationData()
+        travelReviewViewModel.clearTravelReviewData()
+        userReviewViewModel.clearUserReviewData()
+        notificationsViewModel.clearNotificationData()
+        // chatViewModel.clearChatData()
+    }
 
     LaunchedEffect(backStackEntry) {
         val route = backStackEntry?.destination?.route
@@ -679,7 +688,7 @@ fun AppContent(
                                         popUpTo(navController.graph.findNode(AppRoutes.INITIAL_PROFILE_SETUP + "/{userId}/{email}")!!.id) { inclusive = true }
                                     }
                                 }
-                                authViewModel.signOut(userProfileViewModel, travelProposalViewModel, context)
+                                authViewModel.signOut(context, clearAllSessionData = clearAllSessionData)
                             }
                         )
                     } else {
@@ -720,7 +729,7 @@ fun AppContent(
                         onNavigateToChangePassword = { navController.navigate(AppRoutes.CHANGE_PASSWORD) },
                         onNavigateToDeleteAccount = { navController.navigate(AppRoutes.DELETE_ACCOUNT) },
                         onNavigateToEditAccount = { navController.navigate(AppRoutes.EDIT_PROFILE) },
-                        onLogout = { authViewModel.signOut(userProfileViewModel, travelProposalViewModel, context) },
+                        onLogout = { authViewModel.signOut(context, clearAllSessionData = clearAllSessionData) },
                         onBack = { navController.popBackStack() }
                     )
                 }
@@ -739,8 +748,7 @@ fun AppContent(
                         modifier = Modifier.padding(innerPadding),
                         topBarViewModel = topBarViewModel,
                         authViewModel = authViewModel,
-                        userProfileViewModel = userProfileViewModel,
-                        travelProposalViewModel = travelProposalViewModel,
+                        clearAllSessionData = clearAllSessionData,
                         onAccountDeletedSuccessfully = { navController.navigate(AppRoutes.LOGIN) },
                         onBack = { navController.popBackStack() }
                     )
