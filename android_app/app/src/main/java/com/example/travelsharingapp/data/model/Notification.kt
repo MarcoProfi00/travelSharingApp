@@ -56,6 +56,7 @@ data class Notification(
     val relatedUserId: String? = null,
     val proposalId: String? = null,
     val applicationId: String? = null,
+    val applicantId: String? = null,
     val reviewId: String? = null,
     val timestamp: Timestamp = Timestamp.now(),
     val read: Boolean = false
