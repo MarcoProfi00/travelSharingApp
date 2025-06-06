@@ -56,6 +56,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -341,7 +342,6 @@ fun AppContent(
     onAuthDeterminationComplete: () -> Unit,
     onUserAuthenticatedAndNavigatedToMainHub: () -> Unit
 ) {
-    val navController = rememberNavController()
     val context = LocalContext.current
 
     if(!shouldUseTabletLayout())
@@ -355,6 +355,20 @@ fun AppContent(
 
     var startDestination by remember { mutableStateOf<String?>(null) }
     var authDeterminationLatch by remember { mutableStateOf(false) }
+
+    LaunchedEffect(authState) {
+        if (!authDeterminationLatch) {
+            val currentAuthState = authState
+            if (currentAuthState !is AuthState.Initializing && currentAuthState !is AuthState.Loading) {
+                startDestination = when (currentAuthState) {
+                    is AuthState.Authenticated -> AppRoutes.TRAVEL_PROPOSAL_LIST
+                    else -> AppRoutes.LOGIN
+                }
+                onAuthDeterminationComplete()
+                authDeterminationLatch = true
+            }
+        }
+    }
 
     val travelProposalRepo = TravelProposalRepository(context)
     val travelApplicationRepo = TravelApplicationRepository()
@@ -394,9 +408,6 @@ fun AppContent(
     val topBarViewModel: TopBarViewModel = viewModel()
     val currentTopBarConfig by topBarViewModel.config.collectAsState()
 
-    var currentTab by rememberSaveable { mutableStateOf(BottomTab.Explore) }
-    val backStackEntry by navController.currentBackStackEntryAsState()
-
     val clearAllSessionData: () -> Unit = {
         userProfileViewModel.clearUserSessionData()
         travelProposalViewModel.clearTravelProposalData()
@@ -407,736 +418,838 @@ fun AppContent(
         // chatViewModel.clearChatData()
     }
 
-    LaunchedEffect(backStackEntry) {
-        val route = backStackEntry?.destination?.route
-        getTabForMainRoute(route)?.let { mainScreenTab ->
-            currentTab = mainScreenTab
-        }
-    }
-
-    LaunchedEffect(authState) {
-        if (!authDeterminationLatch) {
-            val currentAuthState = authState
-            if (currentAuthState !is AuthState.Initializing && currentAuthState !is AuthState.Loading) {
-                startDestination = when (currentAuthState) {
-                    is AuthState.Authenticated -> AppRoutes.TRAVEL_PROPOSAL_LIST
-                    else -> AppRoutes.LOGIN
-                }
-                onAuthDeterminationComplete()
-                authDeterminationLatch = true
+    val firebaseAuth = FirebaseAuth.getInstance()
+    DisposableEffect(firebaseAuth, authViewModel) {
+        val authStateListener = FirebaseAuth.AuthStateListener { auth ->
+            if (auth.currentUser == null && authViewModel.authState.value != AuthState.Unauthenticated) {
+                authViewModel.resetLoginState()
+            } else if (auth.currentUser != null &&
+                (authViewModel.authState.value == AuthState.Unauthenticated ||
+                        authViewModel.authState.value is AuthState.Error ||
+                        authViewModel.authState.value == AuthState.Initializing)
+            ) {
+                authViewModel.checkIfUserIsAuthenticated()
             }
+        }
+        firebaseAuth.addAuthStateListener(authStateListener)
+        onDispose {
+            firebaseAuth.removeAuthStateListener(authStateListener)
         }
     }
 
     val currentCollectedAuthState = authState
     val currentUser = (currentCollectedAuthState as? AuthState.Authenticated)?.user
 
-    LaunchedEffect(currentUser) {
-        if (currentUser != null) {
-            userProfileViewModel.selectUserProfile(currentUser.uid)
+
+    var showAccountCollisionDialog by rememberSaveable { mutableStateOf(false) }
+    var collisionDetails by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }
+
+    LaunchedEffect(authState) {
+        if (authState is AuthState.AccountCollisionDetected) {
+            collisionDetails = Pair(
+                (authState as AuthState.AccountCollisionDetected).email,
+                (authState as AuthState.AccountCollisionDetected).attemptedPasswordForLinking
+            )
+            showAccountCollisionDialog = true
+        } else {
+            if (showAccountCollisionDialog && authState !is AuthState.Loading) {
+                showAccountCollisionDialog = false
+            }
         }
     }
 
     if (startDestination != null) {
-        val firebaseAuth = FirebaseAuth.getInstance()
-
-        DisposableEffect(firebaseAuth, authViewModel) {
-            val authStateListener = FirebaseAuth.AuthStateListener { auth ->
-                if (auth.currentUser == null && authViewModel.authState.value != AuthState.Unauthenticated) {
-                    authViewModel.resetLoginState()
-                } else if (auth.currentUser != null &&
-                    (authViewModel.authState.value == AuthState.Unauthenticated ||
-                            authViewModel.authState.value is AuthState.Error ||
-                            authViewModel.authState.value == AuthState.Initializing)) {
-                    authViewModel.checkIfUserIsAuthenticated()
+        key(currentUser?.uid) {
+            val navController = rememberNavController()
+            var currentTab by rememberSaveable { mutableStateOf(BottomTab.Explore) }
+            val backStackEntry by navController.currentBackStackEntryAsState()
+            LaunchedEffect(backStackEntry) {
+                val route = backStackEntry?.destination?.route
+                getTabForMainRoute(route)?.let { mainScreenTab ->
+                    currentTab = mainScreenTab
                 }
             }
-            firebaseAuth.addAuthStateListener(authStateListener)
-            onDispose {
-                firebaseAuth.removeAuthStateListener(authStateListener)
-            }
-        }
 
-        LaunchedEffect(authState, navController, startDestination) {
-            if (startDestination == null) return@LaunchedEffect
-
-            when (val state = authState) {
-                is AuthState.Authenticated -> {
-                    val currentRoute = navController.currentBackStackEntry?.destination?.route
-                    if (currentRoute == AppRoutes.LOGIN ||
-                        currentRoute == AppRoutes.SIGNUP ||
-                        currentRoute?.startsWith(AppRoutes.INITIAL_PROFILE_SETUP) == true) {
-                        navController.navigate(AppRoutes.TRAVEL_PROPOSAL_LIST) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    } else if (currentRoute == null && navController.graph.startDestinationRoute == AppRoutes.LOGIN) {
-                        navController.navigate(AppRoutes.TRAVEL_PROPOSAL_LIST) {
-                            popUpTo(AppRoutes.LOGIN) { inclusive = true }
-                        }
-                    }
-                }
-                is AuthState.ProfileSetupRequired -> {
-                    navController.navigate(AppRoutes.initialProfileSetup(state.user.uid, state.user.email ?: "unknown@example.com")) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                }
-                is AuthState.EmailVerificationRequired, AuthState.Unauthenticated, is AuthState.LoggedOut -> {
-                    val currentRoute = navController.currentBackStackEntry?.destination?.route
-                    if (currentRoute != AppRoutes.LOGIN &&
-                        currentRoute != AppRoutes.SIGNUP &&
-                        currentRoute != AppRoutes.RESET_PASSWORD) {
-                        navController.navigate(AppRoutes.LOGIN) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    }
-                }
-                is AuthState.AccountCollisionDetected -> { }
-                is AuthState.Loading, is AuthState.Initializing -> { /* Splash screen */ }
-                is AuthState.Error -> { /* Error state */ }
-            }
-        }
-
-        var showAccountCollisionDialog by rememberSaveable { mutableStateOf(false) }
-        var collisionDetails by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }
-
-        LaunchedEffect(authState) {
-            if (authState is AuthState.AccountCollisionDetected) {
-                collisionDetails = Pair((authState as AuthState.AccountCollisionDetected).email, (authState as AuthState.AccountCollisionDetected).attemptedPasswordForLinking)
-                showAccountCollisionDialog = true
-            } else {
-                if(showAccountCollisionDialog && authState !is AuthState.Loading) {
-                    showAccountCollisionDialog = false
+            LaunchedEffect(currentUser) {
+                if (currentUser != null) {
+                    userProfileViewModel.selectUserProfile(currentUser.uid)
                 }
             }
-        }
 
-        if (showAccountCollisionDialog && collisionDetails != null) {
-            AlertDialog(
-                onDismissRequest = {
-                    showAccountCollisionDialog = false
-                    authViewModel.resetLoginState()
-                    collisionDetails = null
-                },
-                title = { Text("Account Exists") },
-                text = {
-                    Text(
-                        "An account with the email '${collisionDetails!!.first}' already exists. " +
-                                "Would you like to sign in with Google to link " +
-                                "the password you entered to that Google account?"
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (collisionDetails != null) {
-                                authViewModel.initiateGoogleSignInForLinking(
-                                    context as Activity,
-                                    collisionDetails!!.first,
-                                    collisionDetails!!.second
-                                )
+            LaunchedEffect(authState, navController, startDestination) {
+                if (startDestination == null) return@LaunchedEffect
+
+                when (val state = authState) {
+                    is AuthState.Authenticated -> {
+                        val currentRoute = navController.currentBackStackEntry?.destination?.route
+                        if (currentRoute == AppRoutes.LOGIN ||
+                            currentRoute == AppRoutes.SIGNUP ||
+                            currentRoute?.startsWith(AppRoutes.INITIAL_PROFILE_SETUP) == true
+                        ) {
+                            navController.navigate(AppRoutes.TRAVEL_PROPOSAL_LIST) {
+                                popUpTo(0) { inclusive = true }
                             }
-                            showAccountCollisionDialog = false
-                            collisionDetails = null
-                        }
-                    ) {
-                        Text("Sign in with Google")
-                    }
-                },
-                dismissButton = {
-                    Button(
-                        onClick = {
-                            showAccountCollisionDialog = false
-                            authViewModel.resetLoginState()
-                            if (navController.currentBackStackEntry?.destination?.route == AppRoutes.SIGNUP) {
-                                navController.navigate(AppRoutes.LOGIN) { popUpTo(AppRoutes.SIGNUP) { inclusive = true } }
-                            }
-                            collisionDetails = null
-                        }
-                    ) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
-
-        LaunchedEffect(activityIntent, navController) {
-            activityIntent?.let { intent ->
-                if (intent.action == Intent.ACTION_VIEW && intent.data != null) {
-                    Log.d("AppContent", "Handling deep link from activityIntent: ${intent.dataString}")
-                    navController.handleDeepLink(intent)
-                }
-            }
-        }
-
-        Scaffold(
-            snackbarHost = { SnackbarHost(hostState = remember { SnackbarHostState() }) },
-            topBar = {
-                if (currentTopBarConfig.isVisible && authState is AuthState.Authenticated) {
-                    Column {
-                        CenterAlignedTopAppBar(
-                            title = { Text(currentTopBarConfig.title) },
-                            navigationIcon = currentTopBarConfig.navigationIcon ?: {},
-                            actions = { currentTopBarConfig.actions?.invoke(this) },
-                            scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
-                        )
-                        HorizontalDivider(
-                            thickness = 1.dp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                        )
-                    }
-                }
-            },
-            floatingActionButton = {
-                if (authState is AuthState.Authenticated) {
-                    currentTopBarConfig.floatingActionButton?.invoke()
-                }
-            },
-            bottomBar = {
-                if (!WindowInsets.isImeVisible && authState is AuthState.Authenticated &&
-                    currentUser != null &&
-                    (navController.currentDestination?.route?.startsWith(AppRoutes.CHAT_ROOM.substringBefore("/{")) == false)) {
-                    BottomNavigationBar(
-                        selectedTab = currentTab,
-                        onTabSelected = { currentTab = it },
-                        navController = navController,
-                        currentUserId = currentUser.uid
-                    )
-                }
-            },
-            modifier = Modifier
-                .fillMaxSize()
-                .imePadding()
-        ) { innerPadding ->
-
-            NavHost(
-                navController = navController,
-                startDestination = startDestination!!
-            ) {
-                // Login route
-                composable(AppRoutes.LOGIN) {
-                    AuthLoginScreen(
-                        authViewModel = authViewModel,
-                        onNavigateToResetPassword = {
-                            navController.navigate(AppRoutes.RESET_PASSWORD){
-                                popUpTo(AppRoutes.LOGIN) { inclusive = true }
-                            }
-                        },
-                        onNavigateToSignup = {
-                            navController.navigate(AppRoutes.SIGNUP) {
+                        } else if (currentRoute == null && navController.graph.startDestinationRoute == AppRoutes.LOGIN) {
+                            navController.navigate(AppRoutes.TRAVEL_PROPOSAL_LIST) {
                                 popUpTo(AppRoutes.LOGIN) { inclusive = true }
                             }
                         }
-                    )
-                }
+                    }
 
-                // Signup route
-                composable(AppRoutes.SIGNUP) {
-                    AuthSignupScreen(
-                        authViewModel = authViewModel,
-                        onNavigateToLogin = {
+                    is AuthState.ProfileSetupRequired -> {
+                        navController.navigate(
+                            AppRoutes.initialProfileSetup(
+                                state.user.uid,
+                                state.user.email ?: "unknown@example.com"
+                            )
+                        ) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+
+                    is AuthState.EmailVerificationRequired, AuthState.Unauthenticated, is AuthState.LoggedOut -> {
+                        val currentRoute = navController.currentBackStackEntry?.destination?.route
+                        if (currentRoute != AppRoutes.LOGIN &&
+                            currentRoute != AppRoutes.SIGNUP &&
+                            currentRoute != AppRoutes.RESET_PASSWORD
+                        ) {
                             navController.navigate(AppRoutes.LOGIN) {
-                                popUpTo(AppRoutes.SIGNUP) { inclusive = true }
+                                popUpTo(0) { inclusive = true }
                             }
                         }
-                    )
+                    }
+
+                    is AuthState.AccountCollisionDetected -> {}
+                    is AuthState.Loading, is AuthState.Initializing -> { /* Splash screen */
+                    }
+
+                    is AuthState.Error -> { /* Error state */
+                    }
                 }
+            }
 
-                composable(AppRoutes.RESET_PASSWORD) {
-                    AuthResetPasswordScreen(
-                        authViewModel = authViewModel,
-                        onNavigateToLogin = {
-                            navController.navigate(AppRoutes.LOGIN) {
-                                popUpTo(AppRoutes.RESET_PASSWORD) { inclusive = true }
-                            }
-                        }
-                    )
-                }
-
-                // Initial setup profile route
-                composable(
-                    route = AppRoutes.INITIAL_PROFILE_SETUP + "/{userId}/{email}",
-                    arguments = listOf(
-                        navArgument("userId") { type = NavType.StringType },
-                        navArgument("email") { type = NavType.StringType }
-                    )
-                ) { backStackEntry ->
-                    val userId = backStackEntry.arguments?.getString("userId") ?: ""
-                    val email = backStackEntry.arguments?.getString("email") ?: ""
-
-                    if (userId.isNotEmpty()) {
-                        val currentUser = FirebaseAuth.getInstance().currentUser
-                        val initialProfileSetupViewModel: UserProfileInitialSetupViewModel = viewModel(
-                            factory = UserProfileInitialSetupFactory(userProfileRepo, userId, email)
+            if (showAccountCollisionDialog && collisionDetails != null) {
+                AlertDialog(
+                    onDismissRequest = {
+                        showAccountCollisionDialog = false
+                        authViewModel.resetLoginState()
+                        collisionDetails = null
+                    },
+                    title = { Text("Account Exists") },
+                    text = {
+                        Text(
+                            "An account with the email '${collisionDetails!!.first}' already exists. " +
+                                    "Would you like to sign in with Google to link " +
+                                    "the password you entered to that Google account?"
                         )
-                        UserProfileInitialSetupScreen(
-                            viewModel = initialProfileSetupViewModel,
-                            onProfileSavedSuccessfully = {
-                                if (currentUser != null && currentUser.uid == userId) {
-                                    authViewModel.handleProfileSetupCompleted(currentUser)
-                                } else {
-                                    val authStateValue = authViewModel.authState.value
-                                    if (authStateValue is AuthState.ProfileSetupRequired && authStateValue.user.uid == userId) {
-                                        authViewModel.handleProfileSetupCompleted(authStateValue.user)
-                                    } else {
-                                        authViewModel.refreshAuthState()
-                                    }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                if (collisionDetails != null) {
+                                    authViewModel.initiateGoogleSignInForLinking(
+                                        context as Activity,
+                                        collisionDetails!!.first,
+                                        collisionDetails!!.second
+                                    )
                                 }
-                            },
-                            onSetupCancelled = {
-                                if (navController.currentDestination?.route?.startsWith(AppRoutes.INITIAL_PROFILE_SETUP.substringBefore("/{")) == true) {
+                                showAccountCollisionDialog = false
+                                collisionDetails = null
+                            }
+                        ) {
+                            Text("Sign in with Google")
+                        }
+                    },
+                    dismissButton = {
+                        Button(
+                            onClick = {
+                                showAccountCollisionDialog = false
+                                authViewModel.resetLoginState()
+                                if (navController.currentBackStackEntry?.destination?.route == AppRoutes.SIGNUP) {
                                     navController.navigate(AppRoutes.LOGIN) {
-                                        popUpTo(navController.graph.findNode(AppRoutes.INITIAL_PROFILE_SETUP + "/{userId}/{email}")!!.id) { inclusive = true }
+                                        popUpTo(AppRoutes.SIGNUP) {
+                                            inclusive = true
+                                        }
                                     }
                                 }
-                                authViewModel.signOut(context, clearAllSessionData = clearAllSessionData)
+                                collisionDetails = null
                             }
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+
+            LaunchedEffect(activityIntent, navController) {
+                activityIntent?.let { intent ->
+                    if (intent.action == Intent.ACTION_VIEW && intent.data != null) {
+                        Log.d(
+                            "AppContent",
+                            "Handling deep link from activityIntent: ${intent.dataString}"
                         )
-                    } else {
-                        LaunchedEffect(Unit) { navController.navigate(AppRoutes.LOGIN) { popUpTo(0) } }
+                        navController.handleDeepLink(intent)
                     }
                 }
+            }
 
-                composable(AppRoutes.NOTIFICATIONS) {
-                    currentUser?.let {
-                        NotificationScreen(
+            Scaffold(
+                snackbarHost = { SnackbarHost(hostState = remember { SnackbarHostState() }) },
+                topBar = {
+                    if (currentTopBarConfig.isVisible && authState is AuthState.Authenticated) {
+                        Column {
+                            CenterAlignedTopAppBar(
+                                title = { Text(currentTopBarConfig.title) },
+                                navigationIcon = currentTopBarConfig.navigationIcon ?: {},
+                                actions = { currentTopBarConfig.actions?.invoke(this) },
+                                scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
+                            )
+                            HorizontalDivider(
+                                thickness = 1.dp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                            )
+                        }
+                    }
+                },
+                floatingActionButton = {
+                    if (authState is AuthState.Authenticated) {
+                        currentTopBarConfig.floatingActionButton?.invoke()
+                    }
+                },
+                bottomBar = {
+                    if (!WindowInsets.isImeVisible && authState is AuthState.Authenticated &&
+                        currentUser != null &&
+                        (navController.currentDestination?.route?.startsWith(
+                            AppRoutes.CHAT_ROOM.substringBefore(
+                                "/{"
+                            )
+                        ) == false)
+                    ) {
+                        BottomNavigationBar(
+                            selectedTab = currentTab,
+                            onTabSelected = { currentTab = it },
+                            navController = navController,
+                            currentUserId = currentUser.uid
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+            ) { innerPadding ->
+
+                NavHost(
+                    navController = navController,
+                    startDestination = startDestination!!
+                ) {
+                    // Login route
+                    composable(AppRoutes.LOGIN) {
+                        AuthLoginScreen(
+                            authViewModel = authViewModel,
+                            onNavigateToResetPassword = {
+                                navController.navigate(AppRoutes.RESET_PASSWORD) {
+                                    popUpTo(AppRoutes.LOGIN) { inclusive = true }
+                                }
+                            },
+                            onNavigateToSignup = {
+                                navController.navigate(AppRoutes.SIGNUP) {
+                                    popUpTo(AppRoutes.LOGIN) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    // Signup route
+                    composable(AppRoutes.SIGNUP) {
+                        AuthSignupScreen(
+                            authViewModel = authViewModel,
+                            onNavigateToLogin = {
+                                navController.navigate(AppRoutes.LOGIN) {
+                                    popUpTo(AppRoutes.SIGNUP) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    composable(AppRoutes.RESET_PASSWORD) {
+                        AuthResetPasswordScreen(
+                            authViewModel = authViewModel,
+                            onNavigateToLogin = {
+                                navController.navigate(AppRoutes.LOGIN) {
+                                    popUpTo(AppRoutes.RESET_PASSWORD) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+
+                    // Initial setup profile route
+                    composable(
+                        route = AppRoutes.INITIAL_PROFILE_SETUP + "/{userId}/{email}",
+                        arguments = listOf(
+                            navArgument("userId") { type = NavType.StringType },
+                            navArgument("email") { type = NavType.StringType }
+                        )
+                    ) { backStackEntry ->
+                        val userId = backStackEntry.arguments?.getString("userId") ?: ""
+                        val email = backStackEntry.arguments?.getString("email") ?: ""
+
+                        if (userId.isNotEmpty()) {
+                            val currentUser = FirebaseAuth.getInstance().currentUser
+                            val initialProfileSetupViewModel: UserProfileInitialSetupViewModel =
+                                viewModel(
+                                    factory = UserProfileInitialSetupFactory(
+                                        userProfileRepo,
+                                        userId,
+                                        email
+                                    )
+                                )
+                            UserProfileInitialSetupScreen(
+                                viewModel = initialProfileSetupViewModel,
+                                onProfileSavedSuccessfully = {
+                                    if (currentUser != null && currentUser.uid == userId) {
+                                        authViewModel.handleProfileSetupCompleted(currentUser)
+                                    } else {
+                                        val authStateValue = authViewModel.authState.value
+                                        if (authStateValue is AuthState.ProfileSetupRequired && authStateValue.user.uid == userId) {
+                                            authViewModel.handleProfileSetupCompleted(authStateValue.user)
+                                        } else {
+                                            authViewModel.refreshAuthState()
+                                        }
+                                    }
+                                },
+                                onSetupCancelled = {
+                                    if (navController.currentDestination?.route?.startsWith(
+                                            AppRoutes.INITIAL_PROFILE_SETUP.substringBefore("/{")
+                                        ) == true
+                                    ) {
+                                        navController.navigate(AppRoutes.LOGIN) {
+                                            popUpTo(navController.graph.findNode(AppRoutes.INITIAL_PROFILE_SETUP + "/{userId}/{email}")!!.id) {
+                                                inclusive = true
+                                            }
+                                        }
+                                    }
+                                    authViewModel.signOut(
+                                        context,
+                                        clearAllSessionData = clearAllSessionData
+                                    )
+                                }
+                            )
+                        } else {
+                            LaunchedEffect(Unit) {
+                                navController.navigate(AppRoutes.LOGIN) {
+                                    popUpTo(
+                                        0
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    composable(AppRoutes.NOTIFICATIONS) {
+                        currentUser?.let {
+                            NotificationScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                currentUserId = currentUser.uid,
+                                topBarViewModel = topBarViewModel,
+                                notificationsViewModel = notificationsViewModel,
+                                onNavigateToProposal = { proposalId ->
+                                    navController.navigate(AppRoutes.travelProposalInfo(proposalId))
+                                },
+                                onNavigateToTravelReviews = { travelId ->
+                                    navController.navigate(AppRoutes.reviewViewAllScreen(travelId))
+                                },
+                                onNavigateToUserReviewsList = { userId ->
+                                    navController.navigate(AppRoutes.userReviewsViewAllScreen(userId))
+                                },
+                                onNavigateToManageTravelApplications = { travelId ->
+                                    navController.navigate(AppRoutes.manageApplications(travelId))
+                                },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
+
+                    composable(route = AppRoutes.SETTINGS) {
+                        SettingsScreen(
                             modifier = Modifier.padding(innerPadding),
-                            currentUserId = currentUser.uid,
                             topBarViewModel = topBarViewModel,
-                            notificationsViewModel = notificationsViewModel,
-                            onNavigateToProposal = { proposalId ->
-                                navController.navigate(AppRoutes.travelProposalInfo(proposalId))
-                            },
-                            onNavigateToTravelReviews = { travelId ->
-                                navController.navigate(AppRoutes.reviewViewAllScreen(travelId))
-                            },
-                            onNavigateToUserReviewsList = { userId ->
-                                navController.navigate(AppRoutes.userReviewsViewAllScreen(userId))
-                            },
-                            onNavigateToManageTravelApplications = { travelId ->
-                                navController.navigate(AppRoutes.manageApplications(travelId))
+                            themeViewModel = themeViewModel,
+                            authViewModel = authViewModel,
+                            onNavigateToChangePassword = { navController.navigate(AppRoutes.CHANGE_PASSWORD) },
+                            onNavigateToDeleteAccount = { navController.navigate(AppRoutes.DELETE_ACCOUNT) },
+                            onNavigateToEditAccount = { navController.navigate(AppRoutes.EDIT_PROFILE) },
+                            onLogout = {
+                                authViewModel.signOut(
+                                    context,
+                                    clearAllSessionData = clearAllSessionData
+                                )
                             },
                             onBack = { navController.popBackStack() }
                         )
                     }
-                }
 
-                composable(route = AppRoutes.SETTINGS) {
-                    SettingsScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        topBarViewModel = topBarViewModel,
-                        themeViewModel = themeViewModel,
-                        authViewModel = authViewModel,
-                        onNavigateToChangePassword = { navController.navigate(AppRoutes.CHANGE_PASSWORD) },
-                        onNavigateToDeleteAccount = { navController.navigate(AppRoutes.DELETE_ACCOUNT) },
-                        onNavigateToEditAccount = { navController.navigate(AppRoutes.EDIT_PROFILE) },
-                        onLogout = { authViewModel.signOut(context, clearAllSessionData = clearAllSessionData) },
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(route = AppRoutes.CHANGE_PASSWORD) {
-                    ChangePasswordScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        topBarViewModel = topBarViewModel,
-                        authViewModel = authViewModel,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(route = AppRoutes.DELETE_ACCOUNT) {
-                    DeleteAccountScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        topBarViewModel = topBarViewModel,
-                        authViewModel = authViewModel,
-                        clearAllSessionData = clearAllSessionData,
-                        onAccountDeletedSuccessfully = { navController.navigate(AppRoutes.LOGIN) },
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(route = AppRoutes.MANAGE_PASSKEYS) {
-                    ManagePasskeyScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        topBarViewModel = topBarViewModel,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(
-                    route = AppRoutes.REVIEW_VIEW_ALL,
-                    arguments = listOf(navArgument("proposalId") { type = NavType.StringType }),
-                    deepLinks = listOf(navDeepLink { uriPattern = "myapp://travelsharingapp.example.com/reviewViewAll/{proposalId}" })
-                ) { backStackEntry ->
-                    val proposalId = backStackEntry.arguments?.getString("proposalId") ?: return@composable
-                    currentUser?.let {
-                        TravelReviewViewAllScreen(
+                    composable(route = AppRoutes.CHANGE_PASSWORD) {
+                        ChangePasswordScreen(
                             modifier = Modifier.padding(innerPadding),
-                            userId = currentUser.uid,
-                            proposalId = proposalId,
-                            travelProposalViewModel = travelProposalViewModel,
-                            reviewViewModel = travelReviewViewModel,
                             topBarViewModel = topBarViewModel,
-                            onBack = { navController.popBackStack() },
-                            onEditReview = {
-                                navController.navigate(
-                                    AppRoutes.addReview(proposalId, true)
-                                )
-                            },
-                            onAddReview = {
-                                navController.navigate(AppRoutes.addReview(proposalId))
-                            },
-                            onDeleteReview = { reviewId ->
-                                travelReviewViewModel.deleteReview(reviewId)
-                            },
+                            authViewModel = authViewModel,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable(route = AppRoutes.DELETE_ACCOUNT) {
+                        DeleteAccountScreen(
+                            modifier = Modifier.padding(innerPadding),
+                            topBarViewModel = topBarViewModel,
+                            authViewModel = authViewModel,
+                            clearAllSessionData = clearAllSessionData,
+                            onAccountDeletedSuccessfully = { navController.navigate(AppRoutes.LOGIN) },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable(route = AppRoutes.MANAGE_PASSKEYS) {
+                        ManagePasskeyScreen(
+                            modifier = Modifier.padding(innerPadding),
+                            topBarViewModel = topBarViewModel,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable(
+                        route = AppRoutes.REVIEW_VIEW_ALL,
+                        arguments = listOf(navArgument("proposalId") { type = NavType.StringType }),
+                        deepLinks = listOf(navDeepLink {
+                            uriPattern =
+                                "myapp://travelsharingapp.example.com/reviewViewAll/{proposalId}"
+                        })
+                    ) { backStackEntry ->
+                        val proposalId =
+                            backStackEntry.arguments?.getString("proposalId") ?: return@composable
+                        currentUser?.let {
+                            TravelReviewViewAllScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                userId = currentUser.uid,
+                                proposalId = proposalId,
+                                travelProposalViewModel = travelProposalViewModel,
+                                reviewViewModel = travelReviewViewModel,
+                                topBarViewModel = topBarViewModel,
+                                onBack = { navController.popBackStack() },
+                                onEditReview = {
+                                    navController.navigate(
+                                        AppRoutes.addReview(proposalId, true)
+                                    )
+                                },
+                                onAddReview = {
+                                    navController.navigate(AppRoutes.addReview(proposalId))
+                                },
+                                onDeleteReview = { reviewId ->
+                                    travelReviewViewModel.deleteReview(reviewId)
+                                },
+                                userProfileViewModel = userProfileViewModel,
+                                onNavigateToUserProfileInfo = { userId ->
+                                    navController.navigate(
+                                        AppRoutes.userProfile(
+                                            userId,
+                                            isOwnProfile = false
+                                        )
+                                    )
+                                }
+                            )
+                        }
+                    }
+
+                    // Add Review Screen
+                    composable(
+                        AppRoutes.ADD_REVIEW,
+                        arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
+                    ) {
+                        val proposalId = it.arguments?.getString("proposalId") ?: return@composable
+
+                        TravelReviewAddNewScreen(
+                            modifier = Modifier.padding(innerPadding),
+                            proposalId = proposalId,
                             userProfileViewModel = userProfileViewModel,
-                            onNavigateToUserProfileInfo = { userId ->
-                                navController.navigate(AppRoutes.userProfile(userId, isOwnProfile = false))
-                            }
-                        )
-                    }
-                }
-
-                // Add Review Screen
-                composable(
-                    AppRoutes.ADD_REVIEW,
-                    arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
-                ) {
-                    val proposalId = it.arguments?.getString("proposalId") ?: return@composable
-
-                    TravelReviewAddNewScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        proposalId = proposalId,
-                        userProfileViewModel = userProfileViewModel,
-                        reviewViewModel = travelReviewViewModel,
-                        topBarViewModel = topBarViewModel,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                // 1. Travel Proposal List (Home)
-                composable(AppRoutes.TRAVEL_PROPOSAL_LIST) {
-                    currentUser?.let {
-                        LaunchedEffect(Unit) {
-                            onUserAuthenticatedAndNavigatedToMainHub()
-                        }
-
-                        TravelProposalListScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            userId = currentUser.uid,
-                            applicationViewModel = travelApplicationViewModel,
-                            userViewModel = userProfileViewModel,
-                            proposalViewModel = travelProposalViewModel,
-                            topBarViewModel = topBarViewModel,
-                            onNavigateToChat = {
-                                navController.navigate(AppRoutes.CHAT_LIST)
-                            },
-                            onNavigateToTravelProposalInfo = { proposalId ->
-                                navController.navigate(AppRoutes.travelProposalInfo(proposalId))
-                            },
-                            onNavigateToTravelProposalEdit = { proposalId ->
-                                navController.navigate(AppRoutes.travelProposalEdit(proposalId))
-                            }
-                        )
-                    }
-                }
-
-                //Travel Proposal Info
-                composable(
-                    AppRoutes.TRAVEL_PROPOSAL_INFO,
-                    arguments = listOf(navArgument("proposalId") { type = NavType.StringType }),
-                    deepLinks = listOf(navDeepLink { uriPattern = "myapp://travelsharingapp.example.com/travelProposalInfo/{proposalId}" })
-                ) {
-                    val proposalId = it.arguments?.getString("proposalId") ?: ""
-                    currentUser?.let {
-                        TravelProposalInfoScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            proposalId = proposalId,
-                            userId = currentUser.uid,
-                            userViewModel = userProfileViewModel,
-                            applicationViewModel = travelApplicationViewModel,
-                            proposalViewModel = travelProposalViewModel,
                             reviewViewModel = travelReviewViewModel,
                             topBarViewModel = topBarViewModel,
-                            onNavigateToTravelProposalEdit = {
-                                navController.navigate(AppRoutes.travelProposalEdit(proposalId))
-                            },
-                            onNavigateToTravelProposalDuplicate = {
-                                navController.navigate(AppRoutes.travelProposalDuplicate(proposalId))
-                            },
-                            onNavigateToCompanionsReview = {
-                                navController.navigate((AppRoutes.travelProposalUserReviews(proposalId)))
-                            },
-                            onNavigateToManageApplications = {
-                                navController.navigate(AppRoutes.manageApplications(proposalId))
-                            },
-                            onNavigateToTravelProposalApply = {
-                                navController.navigate(AppRoutes.travelProposalApply(proposalId))
-                            },
-                            onNavigateToUserProfile = { userId ->
-                                navController.navigate(AppRoutes.userProfile(userId, isOwnProfile = false))
-                            },
-                            onBack = {
-                                navController.popBackStack()
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    // 1. Travel Proposal List (Home)
+                    composable(AppRoutes.TRAVEL_PROPOSAL_LIST) {
+                        currentUser?.let {
+                            LaunchedEffect(Unit) {
+                                onUserAuthenticatedAndNavigatedToMainHub()
                             }
-                        )
-                    }
-                }
 
-                //Travel Proposal Edit
-                composable(
-                    AppRoutes.TRAVEL_PROPOSAL_EDIT,
-                    arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
-                ) {
-                    val proposalId = it.arguments?.getString("proposalId") ?: ""
-                    currentUser?.let {
-                        TravelProposalManageScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            organizerId = currentUser.uid,
-                            isEditingProposal = true,
-                            isDuplicatingProposal = false,
-                            placesClient = placesClient,
-                            proposalId = proposalId,
-                            userViewModel = userProfileViewModel,
-                            proposalViewModel = travelProposalViewModel,
-                            topBarViewModel = topBarViewModel,
-                            onBack = { navController.popBackStack() }
-                        )
-                    }
-                }
-
-                //Travel Proposal Duplicate
-                composable(
-                    AppRoutes.TRAVEL_PROPOSAL_DUPLICATE,
-                    arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
-                ) {
-                    val proposalId = it.arguments?.getString("proposalId") ?: ""
-                    currentUser?.let {
-                        TravelProposalManageScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            isEditingProposal = false,
-                            isDuplicatingProposal = true,
-                            placesClient = placesClient,
-                            organizerId = currentUser.uid,
-                            proposalId = proposalId,
-                            userViewModel = userProfileViewModel,
-                            proposalViewModel = travelProposalViewModel,
-                            topBarViewModel = topBarViewModel,
-                            onBack = { navController.popBackStack() }
-                        )
-                    }
-                }
-
-                //Travel Proposal New
-                composable(AppRoutes.TRAVEL_PROPOSAL_NEW) {
-                    currentUser?.let {
-                        TravelProposalManageScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            isEditingProposal = false,
-                            isDuplicatingProposal = false,
-                            placesClient = placesClient,
-                            organizerId = currentUser.uid,
-                            userViewModel = userProfileViewModel,
-                            proposalViewModel = travelProposalViewModel,
-                            topBarViewModel = topBarViewModel,
-                            onBack = { navController.popBackStack() }
-                        )
-                    }
-                }
-
-                //Owned Travel Proposals
-                composable(AppRoutes.TRAVEL_PROPOSAL_OWN) {
-                    currentUser?.let {
-                        TravelProposalOwnedListScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            userId = currentUser.uid,
-                            viewModel = travelProposalViewModel,
-                            topBarViewModel = topBarViewModel,
-                            navController = navController
-                        )
-                    }
-                }
-
-                //Manage Applications
-                composable(
-                    AppRoutes.MANAGE_APPLICATIONS,
-                    arguments = listOf(navArgument("proposalId") { type = NavType.StringType }),
-                    deepLinks = listOf(navDeepLink { uriPattern = "myapp://travelsharingapp.example.com/manageApplications/{proposalId}" })
-                ) {
-                    val proposalId = it.arguments?.getString("proposalId") ?: ""
-                    ApplicationManageAllScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        proposalId = proposalId,
-                        userProfileViewModel = userProfileViewModel,
-                        proposalViewModel = travelProposalViewModel,
-                        applicationViewModel = travelApplicationViewModel,
-                        topBarViewModel = topBarViewModel,
-                        onNavigateToUserProfileInfo = { userId ->
-                            navController.navigate(AppRoutes.userProfile(userId, isOwnProfile = false))
-                        },
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                //User Profile
-                composable(
-                    AppRoutes.USER_PROFILE,
-                    arguments = listOf(
-                        navArgument("userId") { type = NavType.StringType },
-                        navArgument("isOwnProfile") { type = NavType.BoolType }
-                    )
-                ) {
-                    val userId = it.arguments?.getString("userId") ?: ""
-                    val isOwnProfile = it.arguments?.getBoolean("isOwnProfile") != false
-                    UserProfileScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        userId = userId,
-                        isOwnProfile = isOwnProfile,
-                        userViewModel = userProfileViewModel,
-                        userReviewViewModel = userReviewViewModel,
-                        topBarViewModel = topBarViewModel,
-                        onNavigateToAllUserReviews = { navController.navigate(AppRoutes.userReviewsViewAllScreen(userId)) },
-                        onNavigateToUserProfileInfo = { userId ->
-                            navController.navigate(AppRoutes.userProfile(userId, isOwnProfile = false))
-                        },
-                        onNavigateToNotifications = { navController.navigate(AppRoutes.NOTIFICATIONS) },
-                        onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) }
-                    )
-                }
-
-                //Edit Profile
-                composable(AppRoutes.EDIT_PROFILE) {
-                    currentUser?.let {
-                        UserProfileEditScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            userViewModel = userProfileViewModel,
-                            topBarViewModel = topBarViewModel,
-                            onBack = { if (userProfileViewModel.saveProfile()) navController.popBackStack() }
-                        )
-                    }
-                }
-
-                //Joined Travel Proposals
-                composable(AppRoutes.TRAVEL_PROPOSAL_JOINED) {
-                    currentUser?.let {
-                        TravelProposalJoinedScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            userId = currentUser.uid,
-                            travelProposalViewModel = travelProposalViewModel,
-                            travelApplicationViewModel = travelApplicationViewModel,
-                            topBarViewModel = topBarViewModel,
-                            onNavigateToReviewPage = { proposalId ->
-                                navController.navigate(
-                                    AppRoutes.reviewViewAllScreen(proposalId)
-                                )
-                            },
-                            onNavigateToProposalInfo = { proposalId ->
-                                navController.navigate(
-                                    AppRoutes.travelProposalInfo(proposalId)
-                                )
-                            },
-                            onNavigateToChat = {
-                                navController.navigate(AppRoutes.CHAT_LIST)
-                            }
-                        )
-                    }
-                }
-
-                // Apply Screen for a Travel Proposal
-                composable(
-                    AppRoutes.TRAVEL_PROPOSAL_APPLY,
-                    arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
-                ) {
-                    val proposalId = it.arguments?.getString("proposalId") ?: ""
-                    ApplicationAddNewScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        proposalId = proposalId,
-                        userViewModel = userProfileViewModel,
-                        travelProposalViewModel = travelProposalViewModel,
-                        applicationViewModel = travelApplicationViewModel,
-                        topBarViewModel = topBarViewModel,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-
-                composable(
-                    route = AppRoutes.USER_REVIEWS_VIEW_ALL,
-                    arguments = listOf(navArgument("userId") { type = NavType.StringType }),
-                    deepLinks = listOf(navDeepLink { uriPattern = "myapp://travelsharingapp.example.com/userReviews/{userId}" })
-                ) {
-                    val userId = it.arguments?.getString("userId") ?: ""
-                    UserReviewListScreen(
-                        modifier = Modifier.padding(innerPadding),
-                        userId = userId,
-                        userProfileViewModel = userProfileViewModel,
-                        userReviewViewModel = userReviewViewModel,
-                        topBarViewModel = topBarViewModel,
-                        onBack = { navController.popBackStack() },
-                        onNavigateToUserProfileInfo = { userId ->
-                            navController.navigate(AppRoutes.userProfile(userId, isOwnProfile = false))
+                            TravelProposalListScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                userId = currentUser.uid,
+                                applicationViewModel = travelApplicationViewModel,
+                                userViewModel = userProfileViewModel,
+                                proposalViewModel = travelProposalViewModel,
+                                topBarViewModel = topBarViewModel,
+                                onNavigateToChat = {
+                                    navController.navigate(AppRoutes.CHAT_LIST)
+                                },
+                                onNavigateToTravelProposalInfo = { proposalId ->
+                                    navController.navigate(AppRoutes.travelProposalInfo(proposalId))
+                                },
+                                onNavigateToTravelProposalEdit = { proposalId ->
+                                    navController.navigate(AppRoutes.travelProposalEdit(proposalId))
+                                }
+                            )
                         }
-                    )
-                }
+                    }
 
-                composable(
-                    route = AppRoutes.TRAVEL_PROPOSAL_USER_REVIEWS,
-                    arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
-                ) {
-                    val proposalId = it.arguments?.getString("proposalId") ?: return@composable
-                    currentUser?.let {
-                        UserReviewAllScreen(
+                    //Travel Proposal Info
+                    composable(
+                        AppRoutes.TRAVEL_PROPOSAL_INFO,
+                        arguments = listOf(navArgument("proposalId") { type = NavType.StringType }),
+                        deepLinks = listOf(navDeepLink {
+                            uriPattern =
+                                "myapp://travelsharingapp.example.com/travelProposalInfo/{proposalId}"
+                        })
+                    ) {
+                        val proposalId = it.arguments?.getString("proposalId") ?: ""
+                        currentUser?.let {
+                            TravelProposalInfoScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                proposalId = proposalId,
+                                userId = currentUser.uid,
+                                userViewModel = userProfileViewModel,
+                                applicationViewModel = travelApplicationViewModel,
+                                proposalViewModel = travelProposalViewModel,
+                                reviewViewModel = travelReviewViewModel,
+                                topBarViewModel = topBarViewModel,
+                                onNavigateToTravelProposalEdit = {
+                                    navController.navigate(AppRoutes.travelProposalEdit(proposalId))
+                                },
+                                onNavigateToTravelProposalDuplicate = {
+                                    navController.navigate(
+                                        AppRoutes.travelProposalDuplicate(
+                                            proposalId
+                                        )
+                                    )
+                                },
+                                onNavigateToCompanionsReview = {
+                                    navController.navigate(
+                                        (AppRoutes.travelProposalUserReviews(
+                                            proposalId
+                                        ))
+                                    )
+                                },
+                                onNavigateToManageApplications = {
+                                    navController.navigate(AppRoutes.manageApplications(proposalId))
+                                },
+                                onNavigateToTravelProposalApply = {
+                                    navController.navigate(AppRoutes.travelProposalApply(proposalId))
+                                },
+                                onNavigateToUserProfile = { userId ->
+                                    navController.navigate(
+                                        AppRoutes.userProfile(
+                                            userId,
+                                            isOwnProfile = false
+                                        )
+                                    )
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                    }
+
+                    //Travel Proposal Edit
+                    composable(
+                        AppRoutes.TRAVEL_PROPOSAL_EDIT,
+                        arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
+                    ) {
+                        val proposalId = it.arguments?.getString("proposalId") ?: ""
+                        currentUser?.let {
+                            TravelProposalManageScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                organizerId = currentUser.uid,
+                                isEditingProposal = true,
+                                isDuplicatingProposal = false,
+                                placesClient = placesClient,
+                                proposalId = proposalId,
+                                userViewModel = userProfileViewModel,
+                                proposalViewModel = travelProposalViewModel,
+                                topBarViewModel = topBarViewModel,
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
+
+                    //Travel Proposal Duplicate
+                    composable(
+                        AppRoutes.TRAVEL_PROPOSAL_DUPLICATE,
+                        arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
+                    ) {
+                        val proposalId = it.arguments?.getString("proposalId") ?: ""
+                        currentUser?.let {
+                            TravelProposalManageScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                isEditingProposal = false,
+                                isDuplicatingProposal = true,
+                                placesClient = placesClient,
+                                organizerId = currentUser.uid,
+                                proposalId = proposalId,
+                                userViewModel = userProfileViewModel,
+                                proposalViewModel = travelProposalViewModel,
+                                topBarViewModel = topBarViewModel,
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
+
+                    //Travel Proposal New
+                    composable(AppRoutes.TRAVEL_PROPOSAL_NEW) {
+                        currentUser?.let {
+                            TravelProposalManageScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                isEditingProposal = false,
+                                isDuplicatingProposal = false,
+                                placesClient = placesClient,
+                                organizerId = currentUser.uid,
+                                userViewModel = userProfileViewModel,
+                                proposalViewModel = travelProposalViewModel,
+                                topBarViewModel = topBarViewModel,
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
+
+                    //Owned Travel Proposals
+                    composable(AppRoutes.TRAVEL_PROPOSAL_OWN) {
+                        currentUser?.let {
+                            TravelProposalOwnedListScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                userId = currentUser.uid,
+                                viewModel = travelProposalViewModel,
+                                topBarViewModel = topBarViewModel,
+                                navController = navController
+                            )
+                        }
+                    }
+
+                    //Manage Applications
+                    composable(
+                        AppRoutes.MANAGE_APPLICATIONS,
+                        arguments = listOf(navArgument("proposalId") { type = NavType.StringType }),
+                        deepLinks = listOf(navDeepLink {
+                            uriPattern =
+                                "myapp://travelsharingapp.example.com/manageApplications/{proposalId}"
+                        })
+                    ) {
+                        val proposalId = it.arguments?.getString("proposalId") ?: ""
+                        ApplicationManageAllScreen(
                             modifier = Modifier.padding(innerPadding),
-                            userId = currentUser.uid,
                             proposalId = proposalId,
+                            userProfileViewModel = userProfileViewModel,
+                            proposalViewModel = travelProposalViewModel,
+                            applicationViewModel = travelApplicationViewModel,
+                            topBarViewModel = topBarViewModel,
+                            onNavigateToUserProfileInfo = { userId ->
+                                navController.navigate(
+                                    AppRoutes.userProfile(
+                                        userId,
+                                        isOwnProfile = false
+                                    )
+                                )
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    //User Profile
+                    composable(
+                        AppRoutes.USER_PROFILE,
+                        arguments = listOf(
+                            navArgument("userId") { type = NavType.StringType },
+                            navArgument("isOwnProfile") { type = NavType.BoolType }
+                        )
+                    ) {
+                        val userId = it.arguments?.getString("userId") ?: ""
+                        val isOwnProfile = it.arguments?.getBoolean("isOwnProfile") != false
+                        UserProfileScreen(
+                            modifier = Modifier.padding(innerPadding),
+                            userId = userId,
+                            isOwnProfile = isOwnProfile,
+                            userViewModel = userProfileViewModel,
+                            userReviewViewModel = userReviewViewModel,
+                            topBarViewModel = topBarViewModel,
+                            onNavigateToAllUserReviews = {
+                                navController.navigate(
+                                    AppRoutes.userReviewsViewAllScreen(
+                                        userId
+                                    )
+                                )
+                            },
+                            onNavigateToUserProfileInfo = { userId ->
+                                navController.navigate(
+                                    AppRoutes.userProfile(
+                                        userId,
+                                        isOwnProfile = false
+                                    )
+                                )
+                            },
+                            onNavigateToNotifications = { navController.navigate(AppRoutes.NOTIFICATIONS) },
+                            onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) }
+                        )
+                    }
+
+                    //Edit Profile
+                    composable(AppRoutes.EDIT_PROFILE) {
+                        currentUser?.let {
+                            UserProfileEditScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                userViewModel = userProfileViewModel,
+                                topBarViewModel = topBarViewModel,
+                                onBack = { if (userProfileViewModel.saveProfile()) navController.popBackStack() }
+                            )
+                        }
+                    }
+
+                    //Joined Travel Proposals
+                    composable(AppRoutes.TRAVEL_PROPOSAL_JOINED) {
+                        currentUser?.let {
+                            TravelProposalJoinedScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                userId = currentUser.uid,
+                                travelProposalViewModel = travelProposalViewModel,
+                                travelApplicationViewModel = travelApplicationViewModel,
+                                topBarViewModel = topBarViewModel,
+                                onNavigateToReviewPage = { proposalId ->
+                                    navController.navigate(
+                                        AppRoutes.reviewViewAllScreen(proposalId)
+                                    )
+                                },
+                                onNavigateToProposalInfo = { proposalId ->
+                                    navController.navigate(
+                                        AppRoutes.travelProposalInfo(proposalId)
+                                    )
+                                },
+                                onNavigateToChat = {
+                                    navController.navigate(AppRoutes.CHAT_LIST)
+                                }
+                            )
+                        }
+                    }
+
+                    // Apply Screen for a Travel Proposal
+                    composable(
+                        AppRoutes.TRAVEL_PROPOSAL_APPLY,
+                        arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
+                    ) {
+                        val proposalId = it.arguments?.getString("proposalId") ?: ""
+                        ApplicationAddNewScreen(
+                            modifier = Modifier.padding(innerPadding),
+                            proposalId = proposalId,
+                            userViewModel = userProfileViewModel,
                             travelProposalViewModel = travelProposalViewModel,
                             applicationViewModel = travelApplicationViewModel,
+                            topBarViewModel = topBarViewModel,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+
+                    composable(
+                        route = AppRoutes.USER_REVIEWS_VIEW_ALL,
+                        arguments = listOf(navArgument("userId") { type = NavType.StringType }),
+                        deepLinks = listOf(navDeepLink {
+                            uriPattern = "myapp://travelsharingapp.example.com/userReviews/{userId}"
+                        })
+                    ) {
+                        val userId = it.arguments?.getString("userId") ?: ""
+                        UserReviewListScreen(
+                            modifier = Modifier.padding(innerPadding),
+                            userId = userId,
                             userProfileViewModel = userProfileViewModel,
                             userReviewViewModel = userReviewViewModel,
                             topBarViewModel = topBarViewModel,
                             onBack = { navController.popBackStack() },
                             onNavigateToUserProfileInfo = { userId ->
-                                navController.navigate(AppRoutes.userProfile(userId, isOwnProfile = false))
+                                navController.navigate(
+                                    AppRoutes.userProfile(
+                                        userId,
+                                        isOwnProfile = false
+                                    )
+                                )
                             }
                         )
                     }
-                }
 
-                //Chat
-                composable(AppRoutes.CHAT_LIST) {
-                    if (currentUser != null) {
-                        ChatListScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            userId = currentUser.uid,
-                            travelProposalViewModel = travelProposalViewModel,
-                            travelApplicationViewModel = travelApplicationViewModel,
-                            onNavigateToChat = { proposalId ->
-                                navController.navigate("${AppRoutes.CHAT_ROOM}/$proposalId")
-                            },
-                            onNavigateBack = {
-                                navController.popBackStack()
-                            },
-                            topBarViewModel = topBarViewModel
-                        )
+                    composable(
+                        route = AppRoutes.TRAVEL_PROPOSAL_USER_REVIEWS,
+                        arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
+                    ) {
+                        val proposalId = it.arguments?.getString("proposalId") ?: return@composable
+                        currentUser?.let {
+                            UserReviewAllScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                userId = currentUser.uid,
+                                proposalId = proposalId,
+                                travelProposalViewModel = travelProposalViewModel,
+                                applicationViewModel = travelApplicationViewModel,
+                                userProfileViewModel = userProfileViewModel,
+                                userReviewViewModel = userReviewViewModel,
+                                topBarViewModel = topBarViewModel,
+                                onBack = { navController.popBackStack() },
+                                onNavigateToUserProfileInfo = { userId ->
+                                    navController.navigate(
+                                        AppRoutes.userProfile(
+                                            userId,
+                                            isOwnProfile = false
+                                        )
+                                    )
+                                }
+                            )
+                        }
                     }
-                }
 
-                composable("${AppRoutes.CHAT_ROOM}/{proposalId}",
-                    arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val proposalId = backStackEntry.arguments?.getString("proposalId") ?: return@composable
-
-                    if (currentUser != null) {
-                        ChatRoomScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            proposalId = proposalId,
-                            userId = currentUser.uid,
-                            userName = currentUser.displayName ?: "Anonymous",
-                            chatViewModel = chatViewModel,
-                            topBarViewModel = topBarViewModel,
-                            onNavigateBack = { navController.popBackStack() }
-                        )
+                    //Chat
+                    composable(AppRoutes.CHAT_LIST) {
+                        if (currentUser != null) {
+                            ChatListScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                userId = currentUser.uid,
+                                travelProposalViewModel = travelProposalViewModel,
+                                travelApplicationViewModel = travelApplicationViewModel,
+                                onNavigateToChat = { proposalId ->
+                                    navController.navigate("${AppRoutes.CHAT_ROOM}/$proposalId")
+                                },
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                topBarViewModel = topBarViewModel
+                            )
+                        }
                     }
-                }
 
+                    composable(
+                        "${AppRoutes.CHAT_ROOM}/{proposalId}",
+                        arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val proposalId =
+                            backStackEntry.arguments?.getString("proposalId") ?: return@composable
+
+                        if (currentUser != null) {
+                            ChatRoomScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                proposalId = proposalId,
+                                userId = currentUser.uid,
+                                userName = currentUser.displayName ?: "Anonymous",
+                                chatViewModel = chatViewModel,
+                                topBarViewModel = topBarViewModel,
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
+
+                }
             }
         }
     } else {
