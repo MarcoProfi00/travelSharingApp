@@ -28,6 +28,24 @@ class NotificationSettingsViewModel(application: Application) : AndroidViewModel
             initialValue = true
         )
 
+    val hasSeenSwipeGuide: StateFlow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[NotificationPreferenceKeys.HAS_SEEN_SWIPE_GUIDE] == true
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
+    fun markSwipeGuideAsSeen() {
+        viewModelScope.launch {
+            dataStore.edit { preferences ->
+                preferences[NotificationPreferenceKeys.HAS_SEEN_SWIPE_GUIDE] = true
+            }
+        }
+    }
+
     val notificationTypeEnabledStates: StateFlow<Map<NotificationType, Boolean>> =
         combine(NotificationType.entries.map { type ->
             dataStore.data.map { preferences ->

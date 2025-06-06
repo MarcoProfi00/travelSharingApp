@@ -20,4 +20,5 @@ object ThemePreferenceKeys {
 
 object NotificationPreferenceKeys {
     val MASTER_NOTIFICATIONS_ENABLED = booleanPreferencesKey("pref_master_notifications_enabled")
+    val HAS_SEEN_SWIPE_GUIDE = booleanPreferencesKey("has_seen_swipe_guide")
 }

@@ -1,5 +1,7 @@
 package com.example.travelsharingapp.ui.screens.notification
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,17 +40,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.travelsharingapp.data.model.Notification
 import com.example.travelsharingapp.data.model.NotificationType
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
+import com.example.travelsharingapp.ui.screens.settings.NotificationSettingsViewModel
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +66,7 @@ fun NotificationScreen(
     currentUserId: String,
     topBarViewModel: TopBarViewModel,
     notificationsViewModel: NotificationViewModel,
+    notificationSettingsViewModel: NotificationSettingsViewModel = viewModel(),
     onNavigateToProposal: (String) -> Unit,
     onNavigateToTravelReviews: (travelId: String) -> Unit,
     onNavigateToUserReviewsList: (userId: String) -> Unit,
@@ -63,6 +74,7 @@ fun NotificationScreen(
     onBack: () -> Unit
 ) {
     val notifications by notificationsViewModel.notifications.collectAsState()
+    val hasSeenSwipeGuide by notificationSettingsViewModel.hasSeenSwipeGuide.collectAsState()
 
     LaunchedEffect(currentUserId) {
         notificationsViewModel.startListeningNotificationsForUser(currentUserId)
@@ -101,8 +113,12 @@ fun NotificationScreen(
                 itemContent = { index ->
                     val notification = notifications[index]
 
+                    val runIntroAnimation = index == 0 && !hasSeenSwipeGuide
+
                     SwipeToDismissContainer(
-                        onDelete = { notificationsViewModel.deleteNotificationOnClick(currentUserId, notification.notificationId) }
+                        onDelete = { notificationsViewModel.deleteNotificationOnClick(currentUserId, notification.notificationId) },
+                        runIntroAnimation = runIntroAnimation,
+                        onIntroAnimationFinished = { notificationSettingsViewModel.markSwipeGuideAsSeen() }
                     ) {
                         NotificationItem(
                             notification = notification,
@@ -143,6 +159,8 @@ fun NotificationScreen(
 @Composable
 fun SwipeToDismissContainer(
     onDelete: () -> Unit,
+    runIntroAnimation: Boolean,
+    onIntroAnimationFinished: () -> Unit,
     content: @Composable () -> Unit
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
@@ -156,26 +174,51 @@ fun SwipeToDismissContainer(
         }
     )
 
+    val offsetX = remember { Animatable(0f) }
+    val density = LocalDensity.current
+
+    LaunchedEffect(runIntroAnimation) {
+        if (runIntroAnimation) {
+            val revealAmountPx = with(density) { -150.dp.toPx() }
+            delay(750)
+            offsetX.animateTo(
+                targetValue = revealAmountPx,
+                animationSpec = tween(durationMillis = 600)
+            )
+            delay(1500)
+            offsetX.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(durationMillis = 400)
+            )
+            onIntroAnimationFinished()
+        }
+    }
+
     SwipeToDismissBox(
         state = dismissState,
-        modifier = Modifier,
+        modifier = Modifier
+            .offset { IntOffset(offsetX.value.roundToInt(), 0) },
         backgroundContent = {
-            if (dismissState.dismissDirection.name == SwipeToDismissBoxValue.EndToStart.name) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.error),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End
+            if (dismissState.dismissDirection.name == SwipeToDismissBoxValue.EndToStart.name || runIntroAnimation) {
+                Box(
+                    modifier = Modifier.offset { IntOffset(-offsetX.value.roundToInt(), 0) }
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "delete",
-                        tint = MaterialTheme.colorScheme.inverseOnSurface,
-                        modifier = Modifier.padding(16.dp).size(24.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.error),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "delete",
+                            tint = MaterialTheme.colorScheme.inverseOnSurface,
+                            modifier = Modifier.padding(16.dp).size(24.dp)
+                        )
+                    }
                 }
             }
         },
