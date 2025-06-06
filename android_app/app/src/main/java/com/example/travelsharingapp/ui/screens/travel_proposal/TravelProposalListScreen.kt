@@ -188,7 +188,7 @@ fun TravelProposalListScreen(
     val proposalsAreLoading by proposalViewModel.isLoading.collectAsState()
     LaunchedEffect(Unit) {
         proposalViewModel.startListeningAllProposals()
-        userViewModel.selectUserProfile(userId)
+        proposalViewModel.startListeningOwnedProposals(userId)
     }
 
     val allProposals by proposalViewModel.allProposals.collectAsState()

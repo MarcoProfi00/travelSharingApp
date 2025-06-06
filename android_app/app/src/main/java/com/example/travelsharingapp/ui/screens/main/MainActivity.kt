@@ -422,6 +422,12 @@ fun AppContent(
     val currentCollectedAuthState = authState
     val currentUser = (currentCollectedAuthState as? AuthState.Authenticated)?.user
 
+    LaunchedEffect(currentUser) {
+        if (currentUser != null) {
+            userProfileViewModel.selectUserProfile(currentUser.uid)
+        }
+    }
+
     if (startDestination != null) {
         val firebaseAuth = FirebaseAuth.getInstance()
 
