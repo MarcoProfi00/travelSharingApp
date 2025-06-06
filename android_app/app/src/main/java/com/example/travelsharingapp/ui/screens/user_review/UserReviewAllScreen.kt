@@ -48,7 +48,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,7 +68,6 @@ import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalVie
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.google.firebase.Timestamp
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,7 +94,7 @@ fun UserReviewAllScreen(
     LaunchedEffect(proposalId) {
         if (proposalId.isNotBlank()) {
             travelProposalViewModel.setDetailProposalId(proposalId)
-            userReviewViewModel.observeReviewsForProposal(proposalId)
+            userReviewViewModel.startListeningReviewsForProposal(proposalId)
             applicationViewModel.startListeningApplicationsForProposal(proposalId)
         }
     }
@@ -253,11 +251,8 @@ fun UserReviewAllScreen(
                                 ReviewCard(
                                     proposalId = proposalId,
                                     user = selectedCompanionForDetail!!,
-                                    userIndex = selectedCompanionIndexForDetail!!,
-                                    companions = companions,
                                     reviews = reviews,
                                     currentUser = currentUser,
-                                    userProfileViewModel = userProfileViewModel,
                                     userReviewViewModel = userReviewViewModel,
                                     onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
                                 )
@@ -286,11 +281,8 @@ fun UserReviewAllScreen(
                         ReviewCard(
                             proposalId = proposalId,
                             user = companion,
-                            userIndex = index,
-                            companions = companions,
                             reviews = reviews,
                             currentUser = currentUser,
-                            userProfileViewModel = userProfileViewModel,
                             userReviewViewModel = userReviewViewModel,
                             onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
                         )
@@ -357,11 +349,8 @@ fun CompanionListItem(
 fun ReviewCard(
     proposalId: String,
     user: UserProfile,
-    userIndex: Int,
-    companions: MutableList<UserProfile>,
     reviews: List<UserReview>,
     currentUser: UserProfile,
-    userProfileViewModel: UserProfileViewModel,
     userReviewViewModel: UserReviewViewModel,
     onNavigateToUserProfileInfo: (String) -> Unit
 ) {
@@ -375,7 +364,6 @@ fun ReviewCard(
 
     val keyboardController = LocalSoftwareKeyboardController.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(user, reviews, currentUser) {
         val matchingReview = reviews.find {
@@ -508,17 +496,7 @@ fun ReviewCard(
                                         comment = reviewText,
                                         date = Timestamp.now()
                                     )
-                                    userReviewViewModel.updateReview(updatedReviewData, oldRatingValue) { updatedUserProfile ->
-                                        if (updatedUserProfile != null) {
-                                            companions[userIndex] = updatedUserProfile
-                                            existingReview = updatedReviewData
-                                            userProfileViewModel.refreshUserProfile(updatedUserProfile)
-
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar("Review updated!")
-                                            }
-                                        }
-                                    }
+                                    userReviewViewModel.updateReview(updatedReviewData, oldRatingValue)
                                     isEditingReview = false
                                 } else {
                                     val newReview = UserReview(
@@ -531,17 +509,7 @@ fun ReviewCard(
                                         comment = reviewText,
                                         date = Timestamp.now()
                                     )
-                                    userReviewViewModel.addReview(newReview) { updatedUserProfile ->
-                                        if (updatedUserProfile != null) {
-                                            companions[userIndex] = updatedUserProfile
-                                            existingReview = newReview
-                                            userProfileViewModel.refreshUserProfile(updatedUserProfile)
-
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar("Review submitted!")
-                                            }
-                                        }
-                                    }
+                                    userReviewViewModel.addReview(newReview)
                                 }
                             },
                             modifier = Modifier.align(Alignment.End),
@@ -566,17 +534,7 @@ fun ReviewCard(
             onDismissRequest = { showDeleteDialog = false },
             confirmButton = {
                 TextButton(onClick = {
-                    userReviewViewModel.deleteReview(existingReview!!) { updatedUserProfile ->
-                        if (updatedUserProfile != null) {
-                            companions[userIndex] = updatedUserProfile
-                            userProfileViewModel.refreshUserProfile(updatedUserProfile)
-                        }
-
-                        reviewText = ""
-                        reviewRating = 0.0f
-                        existingReview = null
-                        showDeleteDialog = false
-                    }
+                    userReviewViewModel.deleteReview(existingReview!!)
                 }) {
                     Text("Yes")
                 }

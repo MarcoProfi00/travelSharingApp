@@ -23,11 +23,7 @@ class TravelReviewViewModel(
 
     private var reviewListenerJob: Job? = null
 
-    fun observeReviews(proposalId: String) {
-//        if (reviewListenerJob?.isActive == true) {
-//            return
-//        }
-
+    fun startListeningReviewsForProposal(proposalId: String) {
         reviewListenerJob?.cancel()
 
         reviewListenerJob = viewModelScope.launch {
@@ -43,35 +39,21 @@ class TravelReviewViewModel(
         reviewListenerJob?.cancel()
     }
 
-    fun addReview(
-        proposalId: String,
-        review: TravelProposalReview,
-        onComplete: (() -> Unit)? = null
-    ) {
+    fun addReview(proposalId: String, review: TravelProposalReview) {
         viewModelScope.launch {
             reviewRepository.addReview(proposalId, review)
-            onComplete?.invoke()
         }
     }
 
-    fun updateReview(
-        proposalId: String,
-        review: TravelProposalReview,
-        onComplete: (() -> Unit)? = null
-    ) {
+    fun updateReview(proposalId: String, review: TravelProposalReview) {
         viewModelScope.launch {
             reviewRepository.updateReview(proposalId, review)
-            onComplete?.invoke()
         }
     }
 
-    fun deleteReview(
-        reviewId: String,
-        onComplete: (() -> Unit)? = null
-    ) {
+    fun deleteReview(reviewId: String) {
         viewModelScope.launch {
             reviewRepository.deleteReview(reviewId)
-            onComplete?.invoke()
         }
     }
 

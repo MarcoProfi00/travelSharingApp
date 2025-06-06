@@ -373,7 +373,7 @@ fun AppContent(
     )
 
     val travelApplicationViewModel: TravelApplicationViewModel = viewModel(
-        factory = TravelApplicationViewModelFactory(travelApplicationRepo, travelProposalRepo)
+        factory = TravelApplicationViewModelFactory(travelApplicationRepo)
     )
 
     val notificationsViewModel: NotificationViewModel = viewModel(
@@ -385,7 +385,7 @@ fun AppContent(
     )
 
     val userReviewViewModel: UserReviewViewModel = viewModel(
-        factory = UserReviewViewModelFactory(userReviewRepo, userProfileRepo)
+        factory = UserReviewViewModelFactory(userReviewRepo)
     )
 
     val chatViewModel: ChatViewModel = viewModel(

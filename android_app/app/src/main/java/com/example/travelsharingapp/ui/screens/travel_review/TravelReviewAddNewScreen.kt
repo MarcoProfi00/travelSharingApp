@@ -89,7 +89,7 @@ fun TravelReviewAddNewScreen(
 
 
     LaunchedEffect(proposalId) {
-        reviewViewModel.observeReviews(proposalId)
+        reviewViewModel.startListeningReviewsForProposal(proposalId)
     }
 
     val reviews by reviewViewModel.proposalSpecificReviews.collectAsState()

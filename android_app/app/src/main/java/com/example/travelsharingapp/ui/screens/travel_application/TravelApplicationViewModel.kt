@@ -3,11 +3,8 @@ package com.example.travelsharingapp.ui.screens.travel_application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.data.model.TravelApplication
 import com.example.travelsharingapp.data.repository.TravelApplicationRepository
-import com.example.travelsharingapp.data.repository.TravelProposalRepository
-import com.example.travelsharingapp.utils.toApplicationStatusOrNull
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,8 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class TravelApplicationViewModel(
-    private val applicationRepository: TravelApplicationRepository,
-    private val proposalRepository: TravelProposalRepository
+    private val applicationRepository: TravelApplicationRepository
 ) : ViewModel() {
     private val _proposalSpecificApplications = MutableStateFlow<List<TravelApplication>>(emptyList())
     val proposalSpecificApplications: StateFlow<List<TravelApplication>> = _proposalSpecificApplications.asStateFlow()
@@ -29,8 +25,7 @@ class TravelApplicationViewModel(
 
     fun addApplication(application: TravelApplication) {
         viewModelScope.launch {
-            val proposal = proposalRepository.getProposalById(application.proposalId) ?: return@launch
-            applicationRepository.addApplication(application, proposal)
+            applicationRepository.addApplication(application)
         }
     }
 
@@ -38,23 +33,20 @@ class TravelApplicationViewModel(
         viewModelScope.launch {
             val application = _proposalSpecificApplications.value
                 .find { it.userId == userId && it.proposalId == proposalId } ?: return@launch
-            val proposal = proposalRepository.getProposalById(proposalId) ?: return@launch
 
-            applicationRepository.withdrawApplication(application, proposal)
+            applicationRepository.withdrawApplication(application)
         }
     }
 
     fun acceptApplication(application: TravelApplication) {
         viewModelScope.launch {
-            val proposal = proposalRepository.getProposalById(application.proposalId) ?: return@launch
-            applicationRepository.acceptApplication(application, proposal)
+            applicationRepository.acceptApplication(application)
         }
     }
 
     fun rejectApplication(application: TravelApplication) {
         viewModelScope.launch {
-            val proposal = proposalRepository.getProposalById(application.proposalId) ?: return@launch
-            applicationRepository.rejectApplication(application, proposal)
+            applicationRepository.rejectApplication(application)
         }
     }
 
@@ -90,12 +82,11 @@ class TravelApplicationViewModel(
 }
 
 class TravelApplicationViewModelFactory(
-    private val applicationRepository: TravelApplicationRepository,
-    private val proposalRepository: TravelProposalRepository
+    private val applicationRepository: TravelApplicationRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel > create(modelClass: Class<T>): T {
         return modelClass
-            .getConstructor(TravelApplicationRepository::class.java, TravelProposalRepository::class.java)
-            .newInstance(applicationRepository, proposalRepository)
+            .getConstructor(TravelApplicationRepository::class.java)
+            .newInstance(applicationRepository)
     }
 }

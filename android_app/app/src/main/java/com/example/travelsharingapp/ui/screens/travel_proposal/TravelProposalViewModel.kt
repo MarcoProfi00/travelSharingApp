@@ -12,6 +12,7 @@ import com.example.travelsharingapp.data.model.TravelProposal
 import com.example.travelsharingapp.data.repository.TravelProposalRepository
 import com.google.firebase.Timestamp
 import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +31,7 @@ sealed class TravelImage {
     data class UriImage(val uri: String) : TravelImage()
 }
 
+@OptIn(FlowPreview::class)
 class TravelProposalViewModel(
     private val repository: TravelProposalRepository
 ) : ViewModel() {
@@ -106,19 +108,19 @@ class TravelProposalViewModel(
     val descriptionError: StateFlow<String?> = _descriptionError.asStateFlow()
 
     private val _suggestedActivitiesError = MutableStateFlow<String?>(null)
-    val suggestedActivitiesError: StateFlow<String?> = _suggestedActivitiesError.asStateFlow()
+    //val suggestedActivitiesError: StateFlow<String?> = _suggestedActivitiesError.asStateFlow()
 
     private val _itineraryError = MutableStateFlow<String?>(null)
     val itineraryError: StateFlow<String?> = _itineraryError.asStateFlow()
 
     private val _imageError = MutableStateFlow<String?>(null)
-    val imageError: StateFlow<String?> = _imageError.asStateFlow()
+    //val imageError: StateFlow<String?> = _imageError.asStateFlow()
 
     private val _applicationIds = MutableStateFlow<List<String>>(emptyList())
     val applicationIds: StateFlow<List<String>> = _applicationIds
 
     private val _creationSuccess = MutableStateFlow(false)
-    val creationSuccess: StateFlow<Boolean> = _creationSuccess
+    //val creationSuccess: StateFlow<Boolean> = _creationSuccess
 
     private var ownedListenerJob: Job? = null
     private var exploreListenerJob: Job? = null

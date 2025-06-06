@@ -108,7 +108,7 @@ fun TravelReviewViewAllScreen(
     }
 
     LaunchedEffect(proposalId) {
-        reviewViewModel.observeReviews(proposalId)
+        reviewViewModel.startListeningReviewsForProposal(proposalId)
     }
 
     val showDeleteDialog = remember { mutableStateOf(false) }
