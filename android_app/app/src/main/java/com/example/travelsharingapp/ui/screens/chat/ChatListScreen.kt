@@ -41,7 +41,7 @@ fun ChatListScreen(
 ) {
     val allProposals by travelProposalViewModel.allProposals.collectAsState()
     val ownedProposals by travelProposalViewModel.ownedProposals.collectAsState()
-    val allApplications by travelApplicationViewModel.applications.collectAsState()
+    val applications by travelApplicationViewModel.userSpecificApplications.collectAsState()
 
     LaunchedEffect(Unit) {
 
@@ -57,11 +57,11 @@ fun ChatListScreen(
     }
 
     LaunchedEffect(userId) {
-        travelApplicationViewModel.loadApplicationsForUser(userId)
+        travelApplicationViewModel.startListeningApplicationsForUser(userId)
         travelProposalViewModel.startListeningOwnedProposals(userId)
     }
 
-    val acceptedApplications = allApplications.filter {
+    val acceptedApplications = applications.filter {
         it.userId == userId && it.statusEnum == ApplicationStatus.Accepted
     }
 

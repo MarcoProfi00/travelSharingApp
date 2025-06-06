@@ -812,10 +812,6 @@ fun AppContent(
                             onUserAuthenticatedAndNavigatedToMainHub()
                         }
 
-                        LaunchedEffect(currentUser.uid) {
-                            travelApplicationViewModel.startRealtimeUpdatesForUser(currentUser.uid)
-                        }
-
                         TravelProposalListScreen(
                             modifier = Modifier.padding(innerPadding),
                             userId = currentUser.uid,

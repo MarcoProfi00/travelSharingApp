@@ -3,131 +3,136 @@ package com.example.travelsharingapp.data.repository
 import android.util.Log
 import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.data.model.TravelApplication
+import com.example.travelsharingapp.data.model.TravelProposal
+import com.example.travelsharingapp.utils.toApplicationStatusOrNull
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class TravelApplicationRepository() {
-
     private val db = FirebaseFirestore.getInstance()
-    private val applicationsRef = db.collection("travel_applications")
+    private val applicationsCollection = db.collection("travel_applications")
+    private val proposalsCollection = db.collection("travelProposals")
+    private val usersCollection = db.collection("users")
 
-    suspend fun getAllApplications(): List<TravelApplication> {
-        return try {
-            val snapshot = applicationsRef.get().await()
-            snapshot.documents.mapNotNull { it.toObject(TravelApplication::class.java) }
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
+    suspend fun addApplication(application: TravelApplication, proposal: TravelProposal) {
+        val applicationRef = applicationsCollection.document()
+        val proposalRef = proposalsCollection.document(proposal.proposalId)
+        val userRef = usersCollection.document(application.userId)
 
-    suspend fun getApplicationsByProposalId(proposalId: String): List<TravelApplication> {
-        return try {
-            val snapshot = applicationsRef.whereEqualTo("proposalId", proposalId).get().await()
-            snapshot.documents.mapNotNull { it.toObject(TravelApplication::class.java) }
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
+        db.runTransaction { transaction ->
+            transaction.set(applicationRef, application.copy(applicationId = applicationRef.id))
+            transaction.update(proposalRef, "applicationIds", FieldValue.arrayUnion(applicationRef.id))
+            transaction.update(userRef, "applicationIds", FieldValue.arrayUnion(applicationRef.id))
 
-    suspend fun getApplicationsByUserId(userId: String): List<TravelApplication> {
-        return try {
-            val snapshot = applicationsRef.whereEqualTo("userId", userId).get().await()
-            snapshot.documents.mapNotNull { it.toObject(TravelApplication::class.java) }
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
+            val newPendingApplicationsCount = proposal.pendingApplicationsCount + 1
+            transaction.update(proposalRef, "pendingApplicationsCount", newPendingApplicationsCount)
 
-    suspend fun addApplication(application: TravelApplication): TravelApplication {
-        val docRef = if (application.applicationId.isNotBlank()) {
-            applicationsRef.document(application.applicationId)
-        } else {
-            applicationsRef.document()
-        }
-
-        val applicationWithId = application.copy(applicationId = docRef.id)
-        docRef.set(applicationWithId).await()
-        return applicationWithId
-    }
-
-    suspend fun removeApplication(applicationId: String) {
-        applicationsRef.document(applicationId).delete().await()
-    }
-
-    suspend fun updateApplicationStatus(applicationId: String, newStatus: ApplicationStatus) {
-        applicationsRef.document(applicationId).update("status", newStatus.name).await()
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    suspend fun addApplicationIdToProposal(proposalId: String, applicationId: String) {
-        val proposalRef = FirebaseFirestore.getInstance().collection("travelProposals").document(proposalId)
-        FirebaseFirestore.getInstance().runTransaction { transaction ->
-            val snapshot = transaction.get(proposalRef)
-            val currentIds = (snapshot.get("applicationIds") as? List<String>)?.toMutableList() ?: mutableListOf()
-            if (!currentIds.contains(applicationId)) {
-                val index = currentIds.indexOfFirst { it.isBlank() }
-                if (index != -1) currentIds[index] = applicationId else currentIds.add(applicationId)
-                transaction.update(proposalRef, "applicationIds", currentIds)
-            }
         }.await()
     }
 
-    @Suppress("UNCHECKED_CAST")
-    suspend fun addApplicationIdToUser(userId: String, applicationId: String) {
-        val userRef = FirebaseFirestore.getInstance().collection("users").document(userId)
-        FirebaseFirestore.getInstance().runTransaction { transaction ->
-            val snapshot = transaction.get(userRef)
-            val currentIds = (snapshot.get("applicationIds") as? List<String>)?.toMutableList() ?: mutableListOf()
-            if (!currentIds.contains(applicationId)) {
-                val index = currentIds.indexOfFirst { it.isBlank() }
-                if (index != -1) currentIds[index] = applicationId else currentIds.add(applicationId)
-                transaction.update(userRef, "applicationIds", currentIds)
-            }
-        }.await()
-    }
+    suspend fun withdrawApplication(application: TravelApplication, proposal: TravelProposal) {
+        val applicationRef = applicationsCollection.document(application.applicationId)
+        val proposalRef = proposalsCollection.document(proposal.proposalId)
+        val userRef = usersCollection.document(application.userId)
 
-    @Suppress("UNCHECKED_CAST")
-    suspend fun removeApplicationIdFromProposal(proposalId: String, applicationId: String) {
-        val proposalRef = FirebaseFirestore.getInstance().collection("travelProposals").document(proposalId)
-        FirebaseFirestore.getInstance().runTransaction { transaction ->
-            val snapshot = transaction.get(proposalRef)
-            Log.d("FirestoreDebug", "Trying to update proposalId=$proposalId with applicationId=$applicationId, exists=${snapshot.exists()}")
-            val currentIds = (snapshot.get("applicationIds") as? List<String>)?.toMutableList() ?: mutableListOf()
-            if (currentIds.contains(applicationId)) {
-                val index = currentIds.indexOf(applicationId)
-                if (index != -1) currentIds[index] = ""
-                transaction.update(proposalRef, "applicationIds", currentIds)
-            }
-        }.await()
-    }
+        db.runTransaction { transaction ->
+            transaction.delete(applicationRef)
+            transaction.update(proposalRef, "applicationIds", FieldValue.arrayRemove(application.applicationId))
+            transaction.update(userRef, "applicationIds", FieldValue.arrayRemove(application.applicationId))
 
-    @Suppress("UNCHECKED_CAST")
-    suspend fun removeApplicationIdFromUser(userId: String, applicationId: String) {
-        val userRef = FirebaseFirestore.getInstance().collection("users").document(userId)
-        FirebaseFirestore.getInstance().runTransaction { transaction ->
-            val snapshot = transaction.get(userRef)
-            Log.d("FirestoreDebug", "Trying to update userId=$userId with applicationId=$applicationId, exists=${snapshot.exists()}")
-            val currentIds = (snapshot.get("applicationIds") as? List<String>)?.toMutableList() ?: mutableListOf()
-            if (currentIds.contains(applicationId)) {
-                val index = currentIds.indexOf(applicationId)
-                if (index != -1) currentIds[index] = ""
-                transaction.update(userRef, "applicationIds", currentIds)
-            }
-        }.await()
-    }
-
-    fun listenApplicationsByUserId(
-        userId: String,
-        onUpdate: (List<TravelApplication>) -> Unit
-    ): ListenerRegistration {
-        return applicationsRef
-            .whereEqualTo("userId", userId)
-            .addSnapshotListener { snapshot, _ ->
-                if (snapshot != null) {
-                    val list = snapshot.documents.mapNotNull { it.toObject(TravelApplication::class.java) }
-                    onUpdate(list)
+            if (application.status == ApplicationStatus.Accepted.name) {
+                val newParticipantsCount = proposal.participantsCount - (1 + application.accompanyingGuests.size)
+                transaction.update(proposalRef, "participantsCount", newParticipantsCount)
+                if (newParticipantsCount < proposal.maxParticipants) {
+                    transaction.update(proposalRef, "status", "Published")
                 }
+            } else if (application.status == ApplicationStatus.Pending.name) {
+                val newPendingCount = proposal.pendingApplicationsCount - 1
+                transaction.update(proposalRef, "pendingApplicationsCount", newPendingCount)
             }
+        }.await()
+    }
+
+    suspend fun acceptApplication(application: TravelApplication, proposal: TravelProposal) {
+        if (application.status.toApplicationStatusOrNull() == ApplicationStatus.Accepted) return
+        val applicationRef = applicationsCollection.document(application.applicationId)
+        val proposalRef = proposalsCollection.document(proposal.proposalId)
+
+        db.runTransaction { transaction ->
+            transaction.update(applicationRef, "status", ApplicationStatus.Accepted.name)
+
+            val newParticipantsCount = proposal.participantsCount + 1 + application.accompanyingGuests.size
+            val newPendingCount = if (application.status.toApplicationStatusOrNull() == ApplicationStatus.Pending) {
+                proposal.pendingApplicationsCount - 1
+            } else {
+                proposal.pendingApplicationsCount
+            }
+
+            transaction.update(proposalRef, "participantsCount", newParticipantsCount)
+            transaction.update(proposalRef, "pendingApplicationsCount", newPendingCount)
+
+            if (newParticipantsCount >= proposal.maxParticipants) {
+                transaction.update(proposalRef, "status", "Full")
+            }
+        }.await()
+    }
+
+    suspend fun rejectApplication(application: TravelApplication, proposal: TravelProposal) {
+        if (application.status.toApplicationStatusOrNull() == ApplicationStatus.Rejected) return
+        val applicationRef = applicationsCollection.document(application.applicationId)
+        val proposalRef = proposalsCollection.document(proposal.proposalId)
+
+        db.runTransaction { transaction ->
+            val originalStatus = application.status.toApplicationStatusOrNull()
+
+            transaction.update(applicationRef, "status", ApplicationStatus.Rejected.name)
+
+            if (originalStatus == ApplicationStatus.Accepted) {
+                val newParticipantsCount = proposal.participantsCount - (1 + application.accompanyingGuests.size)
+                transaction.update(proposalRef, "participantsCount", newParticipantsCount)
+                if (newParticipantsCount < proposal.maxParticipants) {
+                    transaction.update(proposalRef, "status", "Published")
+                }
+            } else if (originalStatus == ApplicationStatus.Pending) {
+                val newPendingCount = proposal.pendingApplicationsCount - 1
+                transaction.update(proposalRef, "pendingApplicationsCount", newPendingCount)
+            }
+        }.await()
+    }
+
+    fun observeApplicationsForUser(userId: String): Flow<List<TravelApplication>> = callbackFlow {
+        val registration: ListenerRegistration = applicationsCollection
+            .whereEqualTo("userId", userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    cancel("Snapshot error", error)
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.toObjects(TravelApplication::class.java) ?: emptyList()
+                trySend(list)
+            }
+
+        awaitClose { registration.remove() }
+    }
+
+    fun observeApplicationsForProposal(proposalId: String): Flow<List<TravelApplication>> = callbackFlow {
+        val registration: ListenerRegistration = applicationsCollection
+            .whereEqualTo("proposalId", proposalId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    cancel("Snapshot error", error)
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.toObjects(TravelApplication::class.java) ?: emptyList()
+                trySend(list)
+            }
+
+        awaitClose { registration.remove() }
     }
 }

@@ -68,6 +68,7 @@ fun ApplicationManageAllScreen(
     onBack: () -> Unit
 ) {
     val observedProposal by proposalViewModel.selectedProposal.collectAsState()
+    val applicationsForProposal by applicationViewModel.proposalSpecificApplications.collectAsState()
 
     val refreshTrigger = remember { mutableIntStateOf(0) }
     val allStatuses = ApplicationStatus.entries.map { it.name }
@@ -75,9 +76,10 @@ fun ApplicationManageAllScreen(
 
     LaunchedEffect(proposalId, refreshTrigger.intValue) {
         proposalViewModel.setDetailProposalId(proposalId)
+        applicationViewModel.startListeningApplicationsForProposal(proposalId)
     }
 
-    if (observedProposal == null) {
+    if (observedProposal == null || applicationsForProposal.isEmpty()) {
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -92,9 +94,10 @@ fun ApplicationManageAllScreen(
     }
 
     val proposal = observedProposal!!
+    val currentApplications = applicationsForProposal
 
-    LaunchedEffect(proposalId, refreshTrigger.intValue) {
-        applicationViewModel.loadApplicationsForProposal(proposalId)
+    val filteredApplications = currentApplications.filter { application ->
+        statusFilter.isEmpty() || statusFilter.contains(application.status)
     }
 
     LaunchedEffect(Unit) {
@@ -107,13 +110,6 @@ fun ApplicationManageAllScreen(
             },
             actions = { /* No specific actions for this screen*/ }
         )
-    }
-
-    val applicationsForProposalState = applicationViewModel.proposalSpecificApplications.collectAsState()
-    val currentApplications = applicationsForProposalState.value
-
-    val filteredApplications = currentApplications.filter { application ->
-        statusFilter.isEmpty() || statusFilter.contains(application.status)
     }
 
     Column(

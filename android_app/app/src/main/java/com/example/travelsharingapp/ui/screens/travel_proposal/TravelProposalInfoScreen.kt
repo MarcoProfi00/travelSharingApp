@@ -128,11 +128,13 @@ fun TravelProposalInfoScreen(
     onBack: () -> Unit,
 ) {
     val observedProposal by proposalViewModel.selectedProposal.collectAsState()
+    val applications by applicationViewModel.proposalSpecificApplications.collectAsState()
     val isLoadingProposal by proposalViewModel.isLoading.collectAsState()
     val currentTargetId by proposalViewModel.currentDetailProposalId.collectAsState()
 
     LaunchedEffect(proposalId) {
         proposalViewModel.setDetailProposalId(proposalId)
+        applicationViewModel.startListeningApplicationsForProposal(proposalId)
     }
 
     if (currentTargetId != proposalId) {
@@ -171,23 +173,12 @@ fun TravelProposalInfoScreen(
     val isOwner = proposal.organizerId == userId
     val showDeleteDialog = remember { mutableStateOf(false) }
     val showWithdrawDialog = remember { mutableStateOf(false) }
+    var isWithdrawing by remember { mutableStateOf(false) }
 
     val organizer by userViewModel.observeUserProfileById(proposal.organizerId).collectAsState(initial = null)
-    val applications by applicationViewModel.applications.collectAsState()
+    var isUserApplied by remember { mutableStateOf(false) }
     var acceptedParticipantIds by remember { mutableStateOf<List<String>>(emptyList()) }
     var isLoadingParticipantIds by remember { mutableStateOf(true) }
-
-    LaunchedEffect(proposal.proposalId, applications, userId) {
-        isLoadingParticipantIds = true
-        try {
-            val ids = applicationViewModel.getAcceptedParticipants(proposal.proposalId, userId)
-            acceptedParticipantIds = ids
-        } catch (_: Exception) {
-            acceptedParticipantIds = emptyList()
-        } finally {
-            isLoadingParticipantIds = false
-        }
-    }
 
     val participantProfileStates = acceptedParticipantIds.map { id ->
         val profileFlow = remember(id) { userViewModel.observeUserProfileById(id) }
@@ -218,6 +209,25 @@ fun TravelProposalInfoScreen(
                 profiles.distinctBy { it.userId }
             }
         }
+    }
+
+    LaunchedEffect(proposalId, applications) {
+        isLoadingParticipantIds = true
+        acceptedParticipantIds = emptyList()
+
+        if (applications.isEmpty()) {
+            return@LaunchedEffect
+        }
+
+        acceptedParticipantIds = try {
+            applications.filter { it.statusEnum == ApplicationStatus.Accepted && it.userId != userId }.map { it.userId }
+        } catch (_: Exception) {
+            emptyList()
+        } finally {
+            isLoadingParticipantIds = false
+        }
+
+        isUserApplied = applications.any { it.userId == userId }
     }
 
     val scrollState = rememberScrollState()
@@ -266,8 +276,15 @@ fun TravelProposalInfoScreen(
         it.proposalId == proposal.proposalId && it.userId == userId
     }
 
+    LaunchedEffect(isWithdrawing, currentUserApplication) {
+        if (isWithdrawing && currentUserApplication == null) {
+            isWithdrawing = false
+        }
+    }
+
     val showParticipantsReviewRow = (proposal.statusEnum == ProposalStatus.Concluded &&
-        (isOwner || currentUserApplication?.statusEnum == ApplicationStatus.Accepted)
+        (isOwner || currentUserApplication?.statusEnum == ApplicationStatus.Accepted) &&
+            acceptedParticipantIds.isNotEmpty() // should not be empty if the proposal is concluded
     )
 
     val configuration = LocalConfiguration.current
@@ -355,7 +372,8 @@ fun TravelProposalInfoScreen(
                     showWithdrawDialog = showWithdrawDialog,
                     onNavigateToManageApplications = onNavigateToManageApplications,
                     onNavigateToTravelProposalApply = onNavigateToTravelProposalApply,
-                    applicationViewModel = applicationViewModel,
+                    isUserApplied = isUserApplied,
+                    isWithdrawing = isWithdrawing
                 )
             }
         }
@@ -427,7 +445,8 @@ fun TravelProposalInfoScreen(
                 showWithdrawDialog = showWithdrawDialog,
                 onNavigateToManageApplications = onNavigateToManageApplications,
                 onNavigateToTravelProposalApply = onNavigateToTravelProposalApply,
-                applicationViewModel = applicationViewModel,
+                isUserApplied = isUserApplied,
+                isWithdrawing = isWithdrawing
             )
         }
     }
@@ -435,8 +454,16 @@ fun TravelProposalInfoScreen(
     if (showDeleteDialog.value) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog.value = false },
-            confirmButton = { TextButton(onClick = { proposalViewModel.deleteProposal(proposal.proposalId); showDeleteDialog.value = false; onBack() }) { Text("Confirm") } },
-            dismissButton = { TextButton(onClick = { showDeleteDialog.value = false }) { Text("Back") } },
+            confirmButton = {
+                TextButton(onClick = {
+                    proposalViewModel.deleteProposal(proposal.proposalId)
+                    showDeleteDialog.value = false
+                    onBack()
+                }) { Text("Confirm") } },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteDialog.value = false
+                }) { Text("Back") } },
             title = { Text("Are you sure?") },
             text = { Text("Do you want to delete this proposal?") }
         )
@@ -445,8 +472,16 @@ fun TravelProposalInfoScreen(
     if (showWithdrawDialog.value) {
         AlertDialog(
             onDismissRequest = { showWithdrawDialog.value = false },
-            confirmButton = { TextButton(onClick = { showWithdrawDialog.value = false; applicationViewModel.withdrawApplication(userId, proposal.proposalId) }) { Text("Confirm") } },
-            dismissButton = { TextButton(onClick = { showWithdrawDialog.value = false }) { Text("Back") } },
+            confirmButton = {
+                TextButton(onClick = {
+                    isWithdrawing = true
+                    showWithdrawDialog.value = false
+                    applicationViewModel.withdrawApplication(userId, proposal.proposalId)
+                }) { Text("Confirm") } },
+            dismissButton = {
+                TextButton(onClick = {
+                    showWithdrawDialog.value = false
+                }) { Text("Back") } },
             title = { Text("Confirm withdrawn") },
             text = { Text("Do you want to withdraw from this trip?") }
         )
@@ -869,8 +904,29 @@ fun ProposalStatusCard(
     showWithdrawDialog: MutableState<Boolean>,
     onNavigateToManageApplications: () -> Unit,
     onNavigateToTravelProposalApply: () -> Unit,
-    applicationViewModel: TravelApplicationViewModel,
+    isUserApplied: Boolean,
+    isWithdrawing: Boolean
 ) {
+    if (isWithdrawing) {
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(16.dp))
+                Text("Withdrawing application...")
+            }
+        }
+        return
+    }
+
     if (proposal.statusEnum != ProposalStatus.Concluded) {
         if (isOwner) {
             Button(
@@ -887,8 +943,7 @@ fun ProposalStatusCard(
                 Text("Delete Proposal", color = MaterialTheme.colorScheme.error)
             }
         } else {
-            if (!applicationViewModel.isUserApplied(userId, proposal.proposalId)) {
-
+            if (!isUserApplied) {
                 if (proposal.statusEnum == ProposalStatus.Full) {
                     ElevatedCard(
                         modifier = Modifier
@@ -915,7 +970,7 @@ fun ProposalStatusCard(
                 }
 
             } else {
-                val application = applications.find { it.proposalId == proposal.proposalId && it.userId == userId }
+                val application = applications.find { it.userId == userId }
                 if (application != null) {
                     ElevatedCard(
                         modifier = Modifier

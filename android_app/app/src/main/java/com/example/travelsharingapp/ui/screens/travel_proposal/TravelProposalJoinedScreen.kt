@@ -90,11 +90,11 @@ fun TravelProposalJoinedScreen(
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(userId) {
-        travelApplicationViewModel.loadApplicationsForUser(userId)
+        travelApplicationViewModel.startListeningApplicationsForUser(userId)
     }
 
-    val joinedApplications by travelApplicationViewModel.userSpecificApplications.collectAsState()
-    val validApplications = joinedApplications.filter {
+    val applications by travelApplicationViewModel.userSpecificApplications.collectAsState()
+    val validApplications = applications.filter {
         it.statusEnum == ApplicationStatus.Pending || it.statusEnum == ApplicationStatus.Accepted
     }
 

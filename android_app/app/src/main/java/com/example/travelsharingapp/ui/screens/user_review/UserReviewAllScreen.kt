@@ -59,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.data.model.UserProfile
 import com.example.travelsharingapp.data.model.UserReview
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
@@ -86,9 +87,18 @@ fun UserReviewAllScreen(
 ) {
     val observedUser by userProfileViewModel.selectedUserProfile.collectAsState()
     val observedProposal by travelProposalViewModel.selectedProposal.collectAsState()
+    val reviews by userReviewViewModel.proposalReviews.collectAsState()
+    val applications by applicationViewModel.proposalSpecificApplications.collectAsState()
+
+    var acceptedParticipantIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isLoadingParticipantIds by remember { mutableStateOf(true) }
 
     LaunchedEffect(proposalId) {
-        travelProposalViewModel.setDetailProposalId(proposalId)
+        if (proposalId.isNotBlank()) {
+            travelProposalViewModel.setDetailProposalId(proposalId)
+            userReviewViewModel.observeReviewsForProposal(proposalId)
+            applicationViewModel.startListeningApplicationsForProposal(proposalId)
+        }
     }
 
     if (observedProposal == null) {
@@ -105,11 +115,19 @@ fun UserReviewAllScreen(
         return
     }
 
+    LaunchedEffect(applications) {
+        isLoadingParticipantIds = true
+        acceptedParticipantIds = try {
+            applications.filter { it.statusEnum == ApplicationStatus.Accepted && it.userId != userId }.map { it.userId }
+        } catch (_: Exception) {
+            emptyList()
+        } finally {
+            isLoadingParticipantIds = false
+        }
+    }
+
     val currentUser = observedUser!!
     val proposal = observedProposal!!
-
-    var acceptedParticipantIds by remember { mutableStateOf<List<String>>(emptyList()) }
-    var isLoadingAcceptedParticipantIds by remember { mutableStateOf(true) }
 
     val companions = remember { mutableStateListOf<UserProfile>() }
     var selectedCompanionForDetail by remember { mutableStateOf<UserProfile?>(null) }
@@ -119,29 +137,6 @@ fun UserReviewAllScreen(
     val isTablet = shouldUseTabletLayout()
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isTabletInLandscape = isTablet && isLandscape
-
-    LaunchedEffect(proposalId) {
-        if (proposalId.isNotBlank()) {
-            userReviewViewModel.observeReviewsForProposal(proposalId)
-        }
-    }
-    val reviews by userReviewViewModel.proposalReviews.collectAsState()
-
-    LaunchedEffect(proposalId, userId, applicationViewModel) {
-        if (proposalId.isNotBlank() && userId.isNotBlank()) {
-            isLoadingAcceptedParticipantIds = true
-            acceptedParticipantIds = try {
-                applicationViewModel.getAcceptedParticipants(proposalId, userId)
-            } catch (_: Exception) {
-                emptyList()
-            } finally {
-                isLoadingAcceptedParticipantIds = false
-            }
-        } else {
-            acceptedParticipantIds = emptyList()
-            isLoadingAcceptedParticipantIds = false
-        }
-    }
 
     val organizerProfile: UserProfile? = proposal.let { p ->
         if (p.organizerId != userId) {
@@ -160,33 +155,25 @@ fun UserReviewAllScreen(
         organizerProfile,
         acceptedCompanionProfileStates,
         userId,
-        isLoadingAcceptedParticipantIds
+        isLoadingParticipantIds
     ) {
-        if (isLoadingAcceptedParticipantIds) {
-            if (companions.isNotEmpty()) companions.clear()
-            selectedCompanionForDetail = null
-            selectedCompanionIndexForDetail = null
+        if (isLoadingParticipantIds) {
             return@LaunchedEffect
         }
 
-        val newCompanionsList = mutableListOf<UserProfile>()
+        selectedCompanionForDetail = null
+        selectedCompanionIndexForDetail = null
+        if (companions.isNotEmpty()) companions.clear()
 
         if (proposal.organizerId != userId) {
-            organizerProfile?.let { newCompanionsList.add(it) }
+            organizerProfile?.let { companions.add(it) }
         }
+        companions.addAll(acceptedCompanionProfileStates.filterNotNull())
 
-        acceptedCompanionProfileStates.filterNotNull().forEach { profile ->
-            if (profile.userId != proposal.organizerId || proposal.organizerId == userId) {
-                newCompanionsList.add(profile)
-            }
-        }
-
-        val distinctNewCompanions = newCompanionsList.distinctBy { it.userId }
-
-        if (companions.toList() != distinctNewCompanions) {
-            companions.clear()
-            companions.addAll(distinctNewCompanions)
-
+        if (isTabletInLandscape && selectedCompanionForDetail == null && companions.isNotEmpty()) {
+            selectedCompanionForDetail = companions.first()
+            selectedCompanionIndexForDetail = 0
+        } else {
             val currentSelectedId = selectedCompanionForDetail?.userId
             val newSelection = if (currentSelectedId != null) companions.find { it.userId == currentSelectedId } else null
 
@@ -200,13 +187,10 @@ fun UserReviewAllScreen(
                 selectedCompanionForDetail = null
                 selectedCompanionIndexForDetail = null
             }
-        } else if (isTabletInLandscape && selectedCompanionForDetail == null && companions.isNotEmpty() && companions.toList() == distinctNewCompanions) {
-            selectedCompanionForDetail = companions.first()
-            selectedCompanionIndexForDetail = 0
         }
     }
 
-    val isPopulatingCompanions = isLoadingAcceptedParticipantIds ||
+    val isPopulatingCompanions = isLoadingParticipantIds ||
             (proposal.organizerId != userId && organizerProfile == null && !acceptedParticipantIds.contains(proposal.organizerId)) ||
             (acceptedParticipantIds.isNotEmpty() && acceptedCompanionProfileStates.any { it == null })
 

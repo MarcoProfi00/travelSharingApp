@@ -131,6 +131,7 @@ import coil.compose.AsyncImage
 import com.example.travelsharingapp.R
 import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.data.model.ProposalStatus
+import com.example.travelsharingapp.data.model.TravelApplication
 import com.example.travelsharingapp.data.model.TravelProposal
 import com.example.travelsharingapp.data.model.Typology
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
@@ -186,13 +187,15 @@ fun TravelProposalListScreen(
     val isTablet = shouldUseTabletLayout()
 
     val proposalsAreLoading by proposalViewModel.isLoading.collectAsState()
+    val allProposals by proposalViewModel.allProposals.collectAsState()
+    val userProfile by userViewModel.selectedUserProfile.collectAsState()
+    val userApplications by applicationViewModel.userSpecificApplications.collectAsState()
+
     LaunchedEffect(Unit) {
         proposalViewModel.startListeningAllProposals()
         proposalViewModel.startListeningOwnedProposals(userId)
+        applicationViewModel.startListeningApplicationsForUser(userId)
     }
-
-    val allProposals by proposalViewModel.allProposals.collectAsState()
-    val userProfile by userViewModel.selectedUserProfile.collectAsState()
 
     if (proposalsAreLoading || userProfile == null) {
         Column(
@@ -334,8 +337,8 @@ fun TravelProposalListScreen(
                         numGridCells = if (isTablet) 4 else 3,
                         favorites = favorites,
                         userId = userId,
-                        applicationViewModel = applicationViewModel,
                         userProfileViewModel = userViewModel,
+                        userApplications = userApplications,
                         onNavigateToTravelProposalInfo = onNavigateToTravelProposalInfo,
                         onNavigateToTravelProposalEdit = onNavigateToTravelProposalEdit
                     )
@@ -485,8 +488,8 @@ fun TravelProposalListScreen(
                         numGridCells = if(isTablet) 3 else 2,
                         favorites = favorites,
                         userId = userId,
-                        applicationViewModel = applicationViewModel,
                         userProfileViewModel = userViewModel,
+                        userApplications = userApplications,
                         onNavigateToTravelProposalInfo = onNavigateToTravelProposalInfo,
                         onNavigateToTravelProposalEdit = onNavigateToTravelProposalEdit
                     )
@@ -1003,12 +1006,11 @@ fun TravelProposalLazyList(
     numGridCells: Int = 2,
     verticalSpacing: Dp = 12.dp,
     modifier: Modifier = Modifier,
-    applicationViewModel: TravelApplicationViewModel,
     userProfileViewModel: UserProfileViewModel,
+    userApplications: List<TravelApplication>,
     onNavigateToTravelProposalInfo: (String) -> Unit,
     onNavigateToTravelProposalEdit: (String) -> Unit
 ) {
-    val applications = applicationViewModel.applications.collectAsState()
     if (travelProposalList.isNotEmpty()) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(numGridCells),
@@ -1023,7 +1025,7 @@ fun TravelProposalLazyList(
                 key = { index -> travelProposalList[index].proposalId },
                 itemContent = { index ->
                     val travelProposal = travelProposalList[index]
-                    val application = applications.value.find { it.proposalId == travelProposal.proposalId && it.userId == userId }
+                    val application = userApplications.find { it.proposalId == travelProposal.proposalId }
                     TravelProposalCard(
                         travelProposal = travelProposal,
                         favorites = favorites,
