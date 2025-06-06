@@ -214,7 +214,11 @@ fun TravelProposalListScreen(
     }
 
     val filteredProposals = remember(allProposals) {
-        allProposals.filter { it.organizerId != userId && it.status != "Concluded" }
+        val now = LocalDate.now()
+        allProposals.filter { proposal ->
+            val startDate = proposal.startDate?.toDate()?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
+            proposal.organizerId != userId && proposal.status != "Concluded" && (startDate == null || startDate.isAfter(now) || startDate.isEqual(now))
+        }
     }
 
     val favorites: List<String> = remember(userProfile) { userProfile?.favoriteProposals ?: emptyList() }
