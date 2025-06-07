@@ -110,9 +110,9 @@ fun NotificationScreen(
             items(
                 count = notifications.size,
                 key = { index -> notifications[index].notificationId },
+                contentType = { "Notification" },
                 itemContent = { index ->
                     val notification = notifications[index]
-
                     val runIntroAnimation = index == 0 && !hasSeenSwipeGuide
 
                     SwipeToDismissContainer(

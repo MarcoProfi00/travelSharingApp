@@ -143,38 +143,27 @@ fun ApplicationManageAllScreen(
                 items(
                     count = filteredApplications.size,
                     key = { index -> filteredApplications[index].applicationId },
+                    contentType = { "UserApplicationCard" },
                     itemContent = { index ->
                         val application = filteredApplications[index]
                         val user by userProfileViewModel.observeUserProfileById(application.userId).collectAsState()
-
-                        if (user != null) {
-                            val nonNullUser = user!!
-                            ApplicationCard(
-                                application = application,
-                                user = nonNullUser,
-                                proposal = proposal,
-                                onAccept = { app ->
-                                    applicationViewModel.acceptApplication(app)
-                                    refreshTrigger.intValue++
-                                },
-                                onReject = { app ->
-                                    applicationViewModel.rejectApplication(app)
-                                    refreshTrigger.intValue++
-                                },
-                                onCardClick = {
-                                    onNavigateToUserProfileInfo(nonNullUser.userId)
-                                }
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator()
+                        val nonNullUser = user!!
+                        ApplicationCard(
+                            application = application,
+                            user = nonNullUser,
+                            proposal = proposal,
+                            onAccept = { app ->
+                                applicationViewModel.acceptApplication(app)
+                                refreshTrigger.intValue++
+                            },
+                            onReject = { app ->
+                                applicationViewModel.rejectApplication(app)
+                                refreshTrigger.intValue++
+                            },
+                            onCardClick = {
+                                onNavigateToUserProfileInfo(nonNullUser.userId)
                             }
-                        }
+                        )
                     }
                 )
 

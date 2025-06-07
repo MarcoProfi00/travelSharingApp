@@ -5,6 +5,7 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
+import coil.util.DebugLogger
 import com.example.travelsharingapp.utils.ManifestUtils
 import com.example.travelsharingapp.utils.TokenProvider
 import com.google.android.libraries.places.api.Places

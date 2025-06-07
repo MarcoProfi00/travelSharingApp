@@ -88,6 +88,7 @@ fun UserReviewListScreen(
             items(
                 count = reviews.size,
                 key = { index -> reviews[index].reviewId },
+                contentType = { "UserReviewCard" },
                 itemContent = { index ->
                     val review = reviews[index]
                     val user by userProfileViewModel.observeUserProfileById(review.reviewerId).collectAsState()

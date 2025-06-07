@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.EventBusy
@@ -49,7 +48,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -90,19 +88,17 @@ fun TravelProposalOwnedListScreen(
     }
 
     val ownedProposals by viewModel.ownedProposals.collectAsState()
+    val openProposals by viewModel.openProposals.collectAsState()
+    val concludedProposals by viewModel.concludedProposals.collectAsState()
+    val statusFilter by viewModel.statusFilter.collectAsState()
+
     LaunchedEffect(userId) {
         viewModel.startListeningOwnedProposals(userId)
     }
 
-    val allStatuses = ProposalStatus.entries.map { it.name }
-    val statusFilter = remember { allStatuses.toMutableStateList() }
-
     val filteredProposals = ownedProposals.filter { proposal ->
         statusFilter.isEmpty() || statusFilter.contains(proposal.status)
     }.sortedByDescending { it.startDate }
-
-    val concludedProposals = filteredProposals.filter { it.status == "Concluded" }
-    val openProposals = filteredProposals.filter { it.status != "Concluded" }
 
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
@@ -120,7 +116,10 @@ fun TravelProposalOwnedListScreen(
         modifier = modifier .fillMaxSize()
     ) {
         StatusFilterChips(
-            selectedStatuses = statusFilter
+            selectedStatuses = statusFilter,
+            onStatusChanged = { newStatuses ->
+                viewModel.updateStatusFilter(newStatuses)
+            }
         )
 
         if (ownedProposals.isEmpty()) {
@@ -167,6 +166,7 @@ fun TravelProposalOwnedListScreen(
                 items(
                     count = openProposals.size,
                     key = { index -> openProposals[index].proposalId },
+                    contentType = { "OwnedTravelProposalCard" },
                     itemContent = { index ->
                         val ownedProposal = openProposals[index]
                         OwnedTravelProposalCard(
@@ -227,6 +227,7 @@ fun TravelProposalOwnedListScreen(
                 items(
                     count = concludedProposals.size,
                     key = { index -> concludedProposals[index].proposalId },
+                    contentType = { "OwnedTravelProposalCard" },
                     itemContent = { index ->
                         val ownedProposal = concludedProposals[index]
                         OwnedTravelProposalCard(
@@ -446,7 +447,8 @@ fun OwnedTravelProposalCard(
 
 @Composable
 fun StatusFilterChips(
-    selectedStatuses: MutableList<String>
+    selectedStatuses: List<String>,
+    onStatusChanged: (List<String>) -> Unit
 ) {
     val allStatuses = ProposalStatus.entries.map { it.name }
 
@@ -455,16 +457,21 @@ fun StatusFilterChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) {
-        items(count = allStatuses.size) { index ->
+        items(
+            count = allStatuses.size,
+            key = { index -> allStatuses[index] }
+        ) { index ->
             val status = allStatuses[index]
             FilterChip(
                 selected = selectedStatuses.contains(status),
                 onClick = {
-                    if (selectedStatuses.contains(status)) {
-                        selectedStatuses.remove(status)
+                    val newSelection = selectedStatuses.toMutableList()
+                    if (newSelection.contains(status)) {
+                        newSelection.remove(status)
                     } else {
-                        selectedStatuses.add(status)
+                        newSelection.add(status)
                     }
+                    onStatusChanged(newSelection)
                 },
                 label = { Text(status) },
                 leadingIcon = if (selectedStatuses.contains(status)) {

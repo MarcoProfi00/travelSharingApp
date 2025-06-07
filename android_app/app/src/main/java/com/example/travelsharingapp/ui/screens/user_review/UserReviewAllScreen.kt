@@ -276,6 +276,7 @@ fun UserReviewAllScreen(
                 items (
                     count = companions.size,
                     key = { index -> companions[index].userId },
+                    contentType = { "UserReviewCard" },
                     itemContent = { index ->
                         val companion = companions[index]
                         ReviewCard(

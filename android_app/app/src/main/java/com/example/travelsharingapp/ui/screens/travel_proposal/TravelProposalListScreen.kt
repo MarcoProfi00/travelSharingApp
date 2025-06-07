@@ -1027,23 +1027,26 @@ fun TravelProposalLazyList(
             items(
                 count = travelProposalList.size,
                 key = { index -> travelProposalList[index].proposalId },
+                contentType = { "TravelProposalCard" },
                 itemContent = { index ->
                     val travelProposal = travelProposalList[index]
                     val application = userApplications.find { it.proposalId == travelProposal.proposalId }
+
+                    val onAddFavoriteRemembered = remember { { userProfileViewModel.addFavorite(travelProposal.proposalId) } }
+                    val onRemoveFavoriteRemembered = remember { { userProfileViewModel.removeFavorite(travelProposal.proposalId) } }
+                    val onCardClickRemembered = remember { { onNavigateToTravelProposalInfo(travelProposal.proposalId) } }
+                    val onEditClickRemembered = remember { { onNavigateToTravelProposalEdit(travelProposal.proposalId) } }
+
                     TravelProposalCard(
                         travelProposal = travelProposal,
                         favorites = favorites,
                         userId = userId,
                         applicationStatus = application?.statusEnum,
                         modifier = Modifier.fillMaxWidth(),
-                        onAddFavorite = { userProfileViewModel.addFavorite(travelProposal.proposalId) },
-                        onRemoveFavorite = { userProfileViewModel.removeFavorite(travelProposal.proposalId) },
-                        onCardClick = {
-                            onNavigateToTravelProposalInfo(travelProposal.proposalId)
-                        },
-                        onEditClick = {
-                            onNavigateToTravelProposalEdit(travelProposal.proposalId)
-                        }
+                        onAddFavorite = onAddFavoriteRemembered,
+                        onRemoveFavorite = onRemoveFavoriteRemembered,
+                        onCardClick = onCardClickRemembered,
+                        onEditClick = onEditClickRemembered
                     )
                 }
             )

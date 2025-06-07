@@ -111,6 +111,7 @@ fun ChatRoomScreen(
                 items(
                     count = sortedMessages.size,
                     key = { index -> sortedMessages[index].messageId },
+                    contentType = { "MessageCard" },
                     itemContent = { index ->
                         val message = sortedMessages[index]
                         val isOwnMessage = message.senderId == userId

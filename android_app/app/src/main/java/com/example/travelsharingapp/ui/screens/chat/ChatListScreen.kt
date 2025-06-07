@@ -78,6 +78,7 @@ fun ChatListScreen(
         items(
             count = chatProposals.size,
             key = { index -> chatProposals[index].proposalId },
+            contentType = { "TravelProposalsCard" },
             itemContent = { index ->
                 val proposal = chatProposals[index]
                 ElevatedCard(
