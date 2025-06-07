@@ -588,8 +588,13 @@ fun TravelHeaderSection(
     onOrganizerClick: (userId: String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        val imageList = if (proposal.thumbnails.isNotEmpty()) {
+            proposal.thumbnails
+        } else {
+            proposal.images
+        }
 
-        val banners = proposal.images.mapIndexed { index, item ->
+        val banners = imageList.mapIndexed { index, item ->
             BannerModel(
                 imageUrl = item,
                 contentDescription = "Banner ${index + 1}"

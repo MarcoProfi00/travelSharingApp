@@ -1144,8 +1144,14 @@ fun TravelProposalCard(
     ){
         Column {
             Box {
-                if (travelProposal.images.isNotEmpty()) {
-                    val banners = travelProposal.images.mapIndexed { index, item ->
+                val imageList = if (travelProposal.thumbnails.isNotEmpty()) {
+                    travelProposal.thumbnails
+                } else {
+                    travelProposal.images
+                }
+
+                if (imageList.isNotEmpty()) {
+                    val banners = imageList.mapIndexed { index, item ->
                         BannerModel(
                             imageUrl = item,
                             contentDescription = "Banner ${index + 1}"

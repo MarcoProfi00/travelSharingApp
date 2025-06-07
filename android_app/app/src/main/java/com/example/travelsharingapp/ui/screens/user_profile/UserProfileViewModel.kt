@@ -64,6 +64,7 @@ class UserProfileViewModel(
     var editedInterests = mutableStateListOf<String>()
     var editedDesiredDestinations = mutableStateListOf<String>()
     var editedProfileImageUri by mutableStateOf<Uri?>(null)
+    var editedProfileImageThumbnailUri by mutableStateOf<Uri?>(null)
 
     private val _validationErrors = MutableStateFlow<Map<EditableProfileField, String>>(emptyMap())
     val validationErrors: StateFlow<Map<EditableProfileField, String>> = _validationErrors.asStateFlow()
@@ -134,6 +135,7 @@ class UserProfileViewModel(
                     editedInterests.clear(); editedInterests.addAll(it.interests)
                     editedDesiredDestinations.clear(); editedDesiredDestinations.addAll(it.desiredDestinations)
                     editedProfileImageUri = it.profileImage?.toUri()
+                    editedProfileImageThumbnailUri = it.profileImageThumbnail?.toUri()
                     _hasUnsavedChanges.value = false
                     _validationErrors.value = emptyMap()
                 } ?: run {
@@ -155,6 +157,7 @@ class UserProfileViewModel(
         editedInterests.clear()
         editedDesiredDestinations.clear()
         editedProfileImageUri = null
+        editedProfileImageThumbnailUri = null
         _hasUnsavedChanges.value = false
         _validationErrors.value = emptyMap()
     }
@@ -220,6 +223,18 @@ class UserProfileViewModel(
         _hasUnsavedChanges.value = (originalUserProfile?.desiredDestinations != editedDesiredDestinations)
     }
 
+    private fun getThumbnailUrl(imageUrl: String, size: String = "200x200"): String {
+        val questionMarkIndex = imageUrl.lastIndexOf('?')
+        val urlWithoutToken = if (questionMarkIndex != -1) imageUrl.substring(0, questionMarkIndex) else imageUrl
+
+        val extensionIndex = urlWithoutToken.lastIndexOf('.')
+        if (extensionIndex == -1) return imageUrl
+
+        val path = urlWithoutToken.substring(0, extensionIndex)
+        val extension = urlWithoutToken.substring(extensionIndex)
+        return "${path}_${size}${extension}"
+    }
+
     fun updateProfileImageUri(uri: Uri, context: Context) {
         viewModelScope.launch {
             val userId = _selectedUserProfile.value?.userId ?: return@launch
@@ -238,9 +253,11 @@ class UserProfileViewModel(
             try {
                 val inputStream = contentResolver.openInputStream(uri) ?: return@launch
                 storageRef.putStream(inputStream).await()
-                val downloadUrl = storageRef.downloadUrl.await()
+                val downloadUrl = storageRef.downloadUrl.await().toString()
+                val thumbnailUrl = getThumbnailUrl(downloadUrl)
 
-                editedProfileImageUri = downloadUrl.toString().toUri()
+                editedProfileImageUri = downloadUrl.toUri()
+                editedProfileImageThumbnailUri = thumbnailUrl.toUri()
                 _hasUnsavedChanges.value = true
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -308,7 +325,8 @@ class UserProfileViewModel(
             description = editedDescription,
             interests = editedInterests.toList(),
             desiredDestinations = editedDesiredDestinations.toList(),
-            profileImage = editedProfileImageUri?.toString()
+            profileImage = editedProfileImageUri?.toString(),
+            profileImageThumbnail = editedProfileImageThumbnailUri?.toString()
         )
 
         viewModelScope.launch {

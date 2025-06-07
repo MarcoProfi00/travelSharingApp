@@ -279,9 +279,14 @@ fun OwnedTravelProposalCard(
         onClick = onClick
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {
-            // Carousel or fallback image
-            if (ownedProposal.images.isNotEmpty()) {
-                val banners = ownedProposal.images.mapIndexed { index, item ->
+            val imageList = if (ownedProposal.thumbnails.isNotEmpty()) {
+                ownedProposal.thumbnails
+            } else {
+                ownedProposal.images
+            }
+
+            if (imageList.isNotEmpty()) {
+                val banners = imageList.mapIndexed { index, item ->
                     BannerModel(
                         imageUrl = item,
                         contentDescription = "Image ${index + 1}"

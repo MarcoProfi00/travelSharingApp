@@ -52,6 +52,18 @@ class TravelProposalRepository(private val context: Context) {
         return snapshot.toObject(TravelProposal::class.java)
     }
 
+    private fun getThumbnailUrl(imageUrl: String, size: String = "200x200"): String {
+        val questionMarkIndex = imageUrl.lastIndexOf('?')
+        val urlWithoutToken = if (questionMarkIndex != -1) imageUrl.substring(0, questionMarkIndex) else imageUrl
+
+        val extensionIndex = urlWithoutToken.lastIndexOf('.')
+        if (extensionIndex == -1) return imageUrl
+
+        val path = urlWithoutToken.substring(0, extensionIndex)
+        val extension = urlWithoutToken.substring(extensionIndex)
+        return "${path}_${size}${extension}"
+    }
+
     private suspend fun uploadProposalImagesToFirebase(
         proposalId: String,
         imageUrisToUpload: List<Uri>
@@ -92,9 +104,11 @@ class TravelProposalRepository(private val context: Context) {
         val docRef = collection.document()
         val proposalId = docRef.id
         val newImageUrls = uploadProposalImagesToFirebase(proposalId, urisToUpload)
+        val newThumbnailUrls = newImageUrls.map { getThumbnailUrl(it) }
         val finalProposal = proposal.copy(
             proposalId = proposalId,
-            images = newImageUrls
+            images = newImageUrls,
+            thumbnails = newThumbnailUrls
         )
 
         docRef.set(finalProposal).await()
@@ -105,8 +119,11 @@ class TravelProposalRepository(private val context: Context) {
         require(proposal.proposalId.isNotBlank()) { "Proposal ID cannot be blank for update." }
 
         val newImageUrls = uploadProposalImagesToFirebase(proposal.proposalId, urisToUpload)
+        val newThumbnailUrls = newImageUrls.map { getThumbnailUrl(it) }
+
         val allImages = proposal.images + newImageUrls
-        val finalProposal = proposal.copy(images = allImages)
+        val allThumbnails = proposal.thumbnails + newThumbnailUrls
+        val finalProposal = proposal.copy(images = allImages, thumbnails = allThumbnails)
 
         collection.document(finalProposal.proposalId)
             .set(finalProposal)

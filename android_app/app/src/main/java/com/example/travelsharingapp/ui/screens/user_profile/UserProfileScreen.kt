@@ -144,6 +144,7 @@ fun UserProfileScreen(
                             firstName = profile.firstName,
                             lastName = profile.lastName,
                             originalImageUri = profile.profileImage,
+                            originalImageThumbnailUri = profile.profileImageThumbnail,
                             rating = profile.rating
                         )
                     }
@@ -171,6 +172,7 @@ fun UserProfileScreen(
                         firstName = profile.firstName,
                         lastName = profile.lastName,
                         originalImageUri = profile.profileImage,
+                        originalImageThumbnailUri = profile.profileImageThumbnail,
                         rating = profile.rating
                     )
 
@@ -457,12 +459,13 @@ fun ProfileImage(
     firstName: String,
     lastName: String,
     originalImageUri: String?,
+    originalImageThumbnailUri: String?,
     pendingImageUri: Uri? = null,
     isEditable: Boolean = false,
     onEditClick: () -> Unit = {}
 ) {
     val imageSize = 150.dp
-    val imageModel: Any? = pendingImageUri ?: originalImageUri
+    val imageModel: Any? = pendingImageUri ?: originalImageThumbnailUri ?: originalImageUri
 
     // Use pending image if available, otherwise use original image
     val showUserInitials = imageModel == null || (imageModel is String && imageModel.isBlank())

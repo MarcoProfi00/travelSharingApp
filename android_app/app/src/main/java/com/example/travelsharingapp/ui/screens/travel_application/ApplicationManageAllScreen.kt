@@ -386,7 +386,8 @@ fun ProfileAvatar(
 
     if (user == null) return
 
-    val imageModel: Any? = user.profileImage?.takeIf { it.isNotBlank() }
+    val imageModel: Any? = user.profileImageThumbnail?.takeIf { it.isNotBlank() }
+        ?: user.profileImage?.takeIf { it.isNotBlank() }
     val showUserInitials = imageModel == null
     val userInitials = "${user.firstName.first().uppercaseChar()}${user.lastName.first().uppercaseChar()}"
 

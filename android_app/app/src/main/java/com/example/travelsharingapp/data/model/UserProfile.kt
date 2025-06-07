@@ -19,6 +19,7 @@ data class UserProfile(
     val numberOfReviews: Int = 0,
 
     val profileImage: String? = null,
+    val profileImageThumbnail: String? = null,
     val applicationIds: List<String> = emptyList(),
     val ownProposals: List<String> = emptyList(),
     val favoriteProposals: List<String> = emptyList(),

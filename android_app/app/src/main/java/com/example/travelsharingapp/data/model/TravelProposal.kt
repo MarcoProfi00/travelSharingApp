@@ -55,6 +55,7 @@ data class TravelProposal(
     val suggestedActivities: List<String> = emptyList(),
     val itinerary: List<ItineraryStop> = emptyList(),
     val images: List<String> = emptyList(),
+    val thumbnails: List<String> = emptyList(),
     val status: String = "",
 
     val applicationIds: List<String> = emptyList(),

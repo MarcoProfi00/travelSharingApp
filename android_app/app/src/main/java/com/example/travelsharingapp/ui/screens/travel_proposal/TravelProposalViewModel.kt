@@ -34,7 +34,7 @@ import java.time.ZoneId
 import java.util.Date
 
 sealed class TravelImage {
-    data class UriImage(val uri: String) : TravelImage()
+    data class UriImage(val uri: String, val thumbnailUrl: String? = null) : TravelImage()
 }
 
 @OptIn(FlowPreview::class)
@@ -388,6 +388,7 @@ class TravelProposalViewModel(
                 itinerary = itinerary.value,
                 organizerId = organizerId.value,
                 images = emptyList(),
+                thumbnails = emptyList(),
                 messages = messages.value,
                 applicationIds = applicationIds.value,
                 pendingApplicationsCount = pendingApplicationsCount.value,
@@ -420,12 +421,13 @@ class TravelProposalViewModel(
                 } else null
             }
 
-            val existingOnlineImages = imageUris.value.mapNotNull {
-                val uri = (it as? TravelImage.UriImage)?.uri
+            val (existingOnlineImages, existingThumbnails) = imageUris.value.mapNotNull {
+                val image = it as? TravelImage.UriImage
+                val uri = image?.uri
                 if (!uri.isNullOrBlank() && (uri.startsWith("http://") || uri.startsWith("https://"))) {
-                    uri
+                    uri to image.thumbnailUrl
                 } else null
-            }
+            }.unzip()
 
             val updated = TravelProposal(
                 proposalId = proposalId,
@@ -441,6 +443,7 @@ class TravelProposalViewModel(
                 itinerary = itinerary.value,
                 organizerId = organizerId.value,
                 images = existingOnlineImages,
+                thumbnails = existingThumbnails.filterNotNull(),
                 messages = messages.value,
                 applicationIds = applicationIds.value,
                 pendingApplicationsCount = pendingApplicationsCount.value,
@@ -498,7 +501,9 @@ class TravelProposalViewModel(
                     _description.value = proposal.description
                     _suggestedActivities.value = proposal.suggestedActivities
                     _itinerary.value = proposal.itinerary
-                    _imageUris.value = proposal.images.map { TravelImage.UriImage(it) }
+                    _imageUris.value = proposal.images.mapIndexed { index, imageUrl ->
+                        TravelImage.UriImage(imageUrl, proposal.thumbnails.getOrNull(index))
+                    }
                     messages.value = proposal.messages
                     _applicationIds.value = proposal.applicationIds
                     pendingApplicationsCount.value = proposal.pendingApplicationsCount
@@ -534,8 +539,9 @@ class TravelProposalViewModel(
                     _description.value = originalProposal.description
                     _suggestedActivities.value = originalProposal.suggestedActivities.toList()
                     _itinerary.value = originalProposal.itinerary.toList()
-                    _imageUris.value = originalProposal.images.map { TravelImage.UriImage(it) }
-                        .toMutableStateList()
+                    _imageUris.value = originalProposal.images.mapIndexed { index, imageUrl ->
+                        TravelImage.UriImage(imageUrl, originalProposal.thumbnails.getOrNull(index))
+                    }.toMutableStateList()
                     messages.value = emptyList()
                     _applicationIds.value = emptyList()
                     pendingApplicationsCount.value = 0

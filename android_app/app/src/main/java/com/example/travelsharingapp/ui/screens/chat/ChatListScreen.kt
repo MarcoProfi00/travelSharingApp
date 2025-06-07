@@ -89,7 +89,7 @@ fun ChatListScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         AsyncImage(
-                            model = proposal.images.firstOrNull(),
+                            model = proposal.thumbnails.firstOrNull() ?: proposal.images.firstOrNull(),
                             contentDescription = proposal.name,
                             modifier = Modifier.size(64.dp)
                         )

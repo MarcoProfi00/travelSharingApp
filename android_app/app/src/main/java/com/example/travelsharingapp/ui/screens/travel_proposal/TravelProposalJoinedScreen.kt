@@ -228,8 +228,14 @@ fun JoinedTravelProposalCard(
                 .width(140.dp)
                 .fillMaxHeight()
             ) {
-                if (proposal.images.isNotEmpty()) {
-                    val banners = proposal.images.mapIndexed { index, item ->
+                val imageList = if (proposal.thumbnails.isNotEmpty()) {
+                    proposal.thumbnails
+                } else {
+                    proposal.images
+                }
+
+                if (imageList.isNotEmpty()) {
+                    val banners = imageList.mapIndexed { index, item ->
                         BannerModel(
                             imageUrl = item,
                             contentDescription = "Image ${index + 1}"
