@@ -405,7 +405,8 @@ fun AppContent(
     val chatViewModel: ChatViewModel = viewModel(
         factory = ChatViewModelFactory(
             application = context.applicationContext as Application,
-            chatRepository = chatRepo
+            chatRepository = chatRepo,
+            userRepository = userProfileRepo
         )
     )
 
@@ -1228,7 +1229,8 @@ fun AppContent(
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 },
-                                topBarViewModel = topBarViewModel
+                                topBarViewModel = topBarViewModel,
+                                unreadMessagesCount = chatViewModel.unreadMessagesCount.collectAsState().value
                             )
                         }
                     }

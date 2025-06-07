@@ -9,14 +9,17 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.travelsharingapp.data.model.ChatMessage
 import com.example.travelsharingapp.data.repository.ChatRepository
+import com.example.travelsharingapp.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class ChatViewModel(
     application: Application,
-    private val chatRepository: ChatRepository
+    private val chatRepository: ChatRepository,
+    private val userRepository: UserRepository
 ) : AndroidViewModel(application) {
+
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages
@@ -24,6 +27,10 @@ class ChatViewModel(
     private val _messageToEdit: MutableState<ChatMessage?> = mutableStateOf(null)
     val messageToEdit: MutableState<ChatMessage?> = _messageToEdit
 
+    private val profileImageCache = mutableMapOf<String, String?>()
+
+    private val _unreadMessagesCount = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val unreadMessagesCount: StateFlow<Map<String, Int>> = _unreadMessagesCount
 
     fun setMessageToEdit(message: ChatMessage?) {
         _messageToEdit.value = message
@@ -31,7 +38,9 @@ class ChatViewModel(
 
     fun observeMessages(proposalId: String) {
         chatRepository.getMessages(proposalId) { newMessages ->
-            _messages.value = newMessages
+            viewModelScope.launch {
+                _messages.value = enrichMessagesWithProfileImages(newMessages)
+            }
         }
     }
 
@@ -67,16 +76,35 @@ class ChatViewModel(
             chatRepository.sendMessage(proposalId, finalMsg)
         }
     }
+
+    suspend fun enrichMessagesWithProfileImages(messages: List<ChatMessage>): List<ChatMessage> {
+        return messages.map { message ->
+            val imageUrl = profileImageCache[message.senderId] ?: run {
+                val profile = userRepository.getUserProfile(message.senderId)
+                val url = profile?.profileImage
+                profileImageCache[message.senderId] = url
+                url
+            }
+            message.copy(senderProfileImage = imageUrl)
+        }
+    }
+
+    fun updateUnreadMessages(proposalId: String, count: Int) {
+        _unreadMessagesCount.value = _unreadMessagesCount.value.toMutableMap().apply {
+            this[proposalId] = count
+        }
+    }
 }
 
 class ChatViewModelFactory(
     private val application: Application,
-    private val chatRepository: ChatRepository
+    private val chatRepository: ChatRepository,
+    private val userRepository: UserRepository
 ) : ViewModelProvider.Factory {
     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ChatViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return ChatViewModel(application, chatRepository) as T
+            return ChatViewModel(application, chatRepository, userRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

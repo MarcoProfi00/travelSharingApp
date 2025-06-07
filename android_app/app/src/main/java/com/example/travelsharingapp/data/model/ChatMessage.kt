@@ -7,6 +7,7 @@ data class ChatMessage(
     val proposalId: String = "",
     val senderId: String = "",
     val senderName: String = "",
+    val senderProfileImage: String? = null,
     val message: String = "",
     val imageUrl: String? = null,
     val timestamp: Timestamp = Timestamp.now()

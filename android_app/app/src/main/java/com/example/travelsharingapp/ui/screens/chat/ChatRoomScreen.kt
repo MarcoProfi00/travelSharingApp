@@ -2,13 +2,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontStyle
 import coil.compose.AsyncImage
 import com.example.travelsharingapp.ui.screens.chat.ChatViewModel
-
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.layout.ContentScale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import android.net.Uri
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material3.AlertDialog
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -83,6 +85,8 @@ fun ChatRoomScreen(
     val showMenu = remember { mutableStateOf(false) }
     val selectedMessage = remember { mutableStateOf<ChatMessage?>(null) }
 
+    val ownMessageColor = Color(0xFFD1C4E9) // Lavanda chiaro
+    val otherMessageColor = Color(0xFFE1F5FE) // Azzurro chiaro
 
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
@@ -142,18 +146,34 @@ fun ChatRoomScreen(
                         val isOwnMessage = message.senderId == userId
                         val expanded = remember { mutableStateOf(false) }
 
+                        // Track previousSenderId for consecutive sender logic
+                        var previousSenderId by remember { mutableStateOf<String?>(null) }
+                        val showProfileImage = previousSenderId != message.senderId
+                        previousSenderId = message.senderId
+
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = if (isOwnMessage) Arrangement.End else Arrangement.Start
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = if (isOwnMessage) Arrangement.End else Arrangement.Start,
+                            verticalAlignment = Alignment.Bottom
                         ) {
+                            if (!isOwnMessage) {
+                                if (showProfileImage) {
+                                    ProfileAvatar(
+                                        imageSize = 28.dp,
+                                        imageUrl = message.senderProfileImage
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.width(28.dp))
+                                }
+                            }
+
                             Column(
                                 modifier = Modifier
-                                    .padding(4.dp)
+                                    .padding(horizontal = 4.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        if (isOwnMessage) MaterialTheme.colorScheme.primaryContainer
-                                        else MaterialTheme.colorScheme.secondaryContainer
-                                    )
+                                    .background(if (isOwnMessage) ownMessageColor else otherMessageColor)
                                     .padding(12.dp)
                                     .widthIn(max = 280.dp)
                                     .combinedClickable(
@@ -169,6 +189,14 @@ fun ChatRoomScreen(
                                 Column(
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
+                                    if (!isOwnMessage) {
+                                        Text(
+                                            text = message.senderName,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+
                                     if (message.imageUrl != null) {
                                         AsyncImage(
                                             model = message.imageUrl,
@@ -189,14 +217,6 @@ fun ChatRoomScreen(
                                                 MaterialTheme.typography.bodyMedium
                                         )
                                     }
-                                }
-
-                                if (!isOwnMessage) {
-                                    Text(
-                                        text = message.senderName,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
                                 }
 
                                 if (isOwnMessage) {
@@ -223,6 +243,17 @@ fun ChatRoomScreen(
                                             }
                                         )
                                     }
+                                }
+                            }
+
+                            if (isOwnMessage) {
+                                if (showProfileImage) {
+                                    ProfileAvatar(
+                                        imageSize = 28.dp,
+                                        imageUrl = message.senderProfileImage
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.width(28.dp))
                                 }
                             }
                         }
@@ -321,5 +352,19 @@ fun ChatRoomScreen(
                 Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
             }
         }
+
     }
+}
+
+@Composable
+fun ProfileAvatar(imageSize: Dp, imageUrl: String?) {
+    AsyncImage(
+        model = imageUrl,
+        contentDescription = "Profile Image",
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .size(imageSize)
+            .clip(CircleShape)
+            .background(Color.Gray)
+    )
 }
