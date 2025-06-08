@@ -77,6 +77,18 @@ class UserRepository() {
         }
     }
 
+    suspend fun updateUserProfileWithMap(userId: String, updates: Map<String, Any?>): Boolean {
+        if (userId.isBlank()) {
+            return false
+        }
+        return try {
+            usersCollection.document(userId).update(updates).await()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     suspend fun addFavorite(userId: String, proposalId: String) {
         val user = getUserProfile(userId)
         user?.let {

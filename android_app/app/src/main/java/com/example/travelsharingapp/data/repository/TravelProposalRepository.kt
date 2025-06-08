@@ -6,6 +6,7 @@ import android.util.Log
 import com.example.travelsharingapp.data.model.TravelProposal
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
@@ -52,18 +53,6 @@ class TravelProposalRepository(private val context: Context) {
         return snapshot.toObject(TravelProposal::class.java)
     }
 
-    private fun getThumbnailUrl(imageUrl: String, size: String = "200x200"): String {
-        val questionMarkIndex = imageUrl.lastIndexOf('?')
-        val urlWithoutToken = if (questionMarkIndex != -1) imageUrl.substring(0, questionMarkIndex) else imageUrl
-
-        val extensionIndex = urlWithoutToken.lastIndexOf('.')
-        if (extensionIndex == -1) return imageUrl
-
-        val path = urlWithoutToken.substring(0, extensionIndex)
-        val extension = urlWithoutToken.substring(extensionIndex)
-        return "${path}_${size}${extension}"
-    }
-
     private suspend fun uploadProposalImagesToFirebase(
         proposalId: String,
         imageUrisToUpload: List<Uri>
@@ -103,15 +92,24 @@ class TravelProposalRepository(private val context: Context) {
     suspend fun addProposal(proposal: TravelProposal, urisToUpload: List<Uri>) {
         val docRef = collection.document()
         val proposalId = docRef.id
-        val newImageUrls = uploadProposalImagesToFirebase(proposalId, urisToUpload)
-        val newThumbnailUrls = newImageUrls.map { getThumbnailUrl(it) }
-        val finalProposal = proposal.copy(
-            proposalId = proposalId,
-            images = newImageUrls,
-            thumbnails = newThumbnailUrls
-        )
 
-        docRef.set(finalProposal).await()
+        val initialProposal = proposal.copy(
+            proposalId = proposalId,
+            images = emptyList(),
+            thumbnails = emptyList()
+        )
+        docRef.set(initialProposal).await()
+
+        try {
+            val newImageUrls = uploadProposalImagesToFirebase(proposalId, urisToUpload)
+
+            if (newImageUrls.isNotEmpty()) {
+                docRef.update(mapOf("images" to newImageUrls)).await()
+            }
+        } catch (e: Exception) {
+            docRef.delete().await()
+            throw e
+        }
 
     }
 
@@ -119,14 +117,11 @@ class TravelProposalRepository(private val context: Context) {
         require(proposal.proposalId.isNotBlank()) { "Proposal ID cannot be blank for update." }
 
         val newImageUrls = uploadProposalImagesToFirebase(proposal.proposalId, urisToUpload)
-        val newThumbnailUrls = newImageUrls.map { getThumbnailUrl(it) }
-
         val allImages = proposal.images + newImageUrls
-        val allThumbnails = proposal.thumbnails + newThumbnailUrls
-        val finalProposal = proposal.copy(images = allImages, thumbnails = allThumbnails)
+        val finalProposal = proposal.copy(images = allImages)
 
         collection.document(finalProposal.proposalId)
-            .set(finalProposal)
+            .set(finalProposal, SetOptions.merge())
             .await()
     }
 

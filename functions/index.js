@@ -1,8 +1,9 @@
 const admin = require("firebase-admin");
 const {onDocumentCreated, onDocumentUpdated} = require("firebase-functions/v2/firestore");
+const {onObjectFinalized} = require("firebase-functions/v2/storage");
+const path = require("path");
 
 admin.initializeApp();
-
 
 /**
  * Handles sending FCM notifications and saving them to Firestore history.
@@ -545,3 +546,67 @@ exports.notifyOnUserPreferencesChange = onDocumentUpdated("users/{userId}", asyn
 
   return null;
 });
+
+/**
+ * Generate a valid path after thumbnail creation, and update the correct document
+ * (travel proposal or user)
+ */
+exports.generateThumbnailUrl = onObjectFinalized(async (event) => {
+  const fileBucket = event.data.bucket;
+  const filePath = event.data.name;
+  const contentType = event.data.contentType;
+
+  // Exit if this is not an image.
+  if (!filePath || !contentType || !contentType.startsWith("image/")) {
+    console.log("This is not an image. Exiting function.");
+    return;
+  }
+
+  const fileName = path.basename(filePath);
+  const isThumbnail = /_\d+x\d+$/.test(path.parse(fileName).name);
+
+  if (!isThumbnail) {
+    console.log(`"${fileName}" is not a thumbnail. Exiting function.`);
+    return;
+  }
+
+  console.log(`Thumbnail detected: "${fileName}". Processing...`);
+
+  const bucket = admin.storage().bucket(fileBucket);
+  const file = bucket.file(filePath);
+  const [thumbnailUrl] = await file.getSignedUrl({
+    action: "read",
+    expires: "03-09-2491",
+  });
+
+  if (filePath.startsWith("travel_images/")) {
+    const proposalId = fileName.split("_")[0];
+    if (!proposalId) {
+      console.error("Could not extract proposalId from filename.", {filePath});
+      return;
+    }
+
+    const proposalRef = admin.firestore().collection("travelProposals").doc(proposalId);
+    console.log(`Updating travel proposal: ${proposalId}`);
+    return proposalRef.update({
+      thumbnails: admin.firestore.FieldValue.arrayUnion(thumbnailUrl),
+    });
+  }
+
+  if (filePath.startsWith("profile_images/")) {
+    const userId = path.parse(fileName).name.split("_")[0];
+    if (!userId) {
+      console.error("Could not extract userId from filename.", {filePath});
+      return;
+    }
+    const userRef = admin.firestore().collection("users").doc(userId);
+    console.log(`Updating user profile: ${userId}`);
+    return userRef.update({
+      profileImageThumbnail: thumbnailUrl,
+    });
+  }
+
+  console.log("File path did not match any known rules. Exiting.", {filePath});
+  return;
+});
+

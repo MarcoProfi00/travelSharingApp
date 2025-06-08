@@ -223,18 +223,6 @@ class UserProfileViewModel(
         _hasUnsavedChanges.value = (originalUserProfile?.desiredDestinations != editedDesiredDestinations)
     }
 
-    private fun getThumbnailUrl(imageUrl: String, size: String = "200x200"): String {
-        val questionMarkIndex = imageUrl.lastIndexOf('?')
-        val urlWithoutToken = if (questionMarkIndex != -1) imageUrl.substring(0, questionMarkIndex) else imageUrl
-
-        val extensionIndex = urlWithoutToken.lastIndexOf('.')
-        if (extensionIndex == -1) return imageUrl
-
-        val path = urlWithoutToken.substring(0, extensionIndex)
-        val extension = urlWithoutToken.substring(extensionIndex)
-        return "${path}_${size}${extension}"
-    }
-
     fun updateProfileImageUri(uri: Uri, context: Context) {
         viewModelScope.launch {
             val userId = _selectedUserProfile.value?.userId ?: return@launch
@@ -254,10 +242,8 @@ class UserProfileViewModel(
                 val inputStream = contentResolver.openInputStream(uri) ?: return@launch
                 storageRef.putStream(inputStream).await()
                 val downloadUrl = storageRef.downloadUrl.await().toString()
-                val thumbnailUrl = getThumbnailUrl(downloadUrl)
 
                 editedProfileImageUri = downloadUrl.toUri()
-                editedProfileImageThumbnailUri = thumbnailUrl.toUri()
                 _hasUnsavedChanges.value = true
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -325,12 +311,23 @@ class UserProfileViewModel(
             description = editedDescription,
             interests = editedInterests.toList(),
             desiredDestinations = editedDesiredDestinations.toList(),
-            profileImage = editedProfileImageUri?.toString(),
-            profileImageThumbnail = editedProfileImageThumbnailUri?.toString()
+            profileImage = editedProfileImageUri?.toString()
         )
 
         viewModelScope.launch {
-            val success = userRepository.updateUserProfile(updatedProfile)
+            val updates = mapOf(
+                "firstName" to updatedProfile.firstName,
+                "lastName" to updatedProfile.lastName,
+                "email" to updatedProfile.email,
+                "nickname" to updatedProfile.nickname,
+                "birthDate" to updatedProfile.birthDate,
+                "phoneNumber" to updatedProfile.phoneNumber,
+                "description" to updatedProfile.description,
+                "interests" to updatedProfile.interests,
+                "desiredDestinations" to updatedProfile.desiredDestinations,
+                "profileImage" to updatedProfile.profileImage
+            )
+            val success = userRepository.updateUserProfileWithMap(currentSelectedProfile.userId, updates)
             if (success) {
                 _selectedUserProfile.value = updatedProfile
                 originalUserProfile = updatedProfile.copy()
