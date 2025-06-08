@@ -1,7 +1,9 @@
 package com.example.travelsharingapp.ui.screens.main
 
+import ChatRoomScreen
 import android.Manifest
 import android.app.Activity
+import android.app.Application
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -95,7 +97,6 @@ import com.example.travelsharingapp.ui.screens.authentication.AuthState
 import com.example.travelsharingapp.ui.screens.authentication.AuthViewModel
 import com.example.travelsharingapp.ui.screens.authentication.AuthViewModelFactory
 import com.example.travelsharingapp.ui.screens.chat.ChatListScreen
-import com.example.travelsharingapp.ui.screens.chat.ChatRoomScreen
 import com.example.travelsharingapp.ui.screens.chat.ChatViewModel
 import com.example.travelsharingapp.ui.screens.chat.ChatViewModelFactory
 import com.example.travelsharingapp.ui.screens.notification.NotificationScreen
@@ -375,7 +376,7 @@ fun AppContent(
     val travelReviewRepo = TravelReviewRepository()
     val userReviewRepo = UserReviewRepository()
     val notificationRepo = NotificationRepository()
-    val chatRepo = ChatRepository()
+    val chatRepo = ChatRepository(context)
 
     val travelProposalViewModel: TravelProposalViewModel = viewModel(
         factory = TravelProposalViewModelFactory(travelProposalRepo)
@@ -402,7 +403,11 @@ fun AppContent(
     )
 
     val chatViewModel: ChatViewModel = viewModel(
-        factory = ChatViewModelFactory(chatRepo)
+        factory = ChatViewModelFactory(
+            application = context.applicationContext as Application,
+            chatRepository = chatRepo,
+            userRepository = userProfileRepo
+        )
     )
 
     val topBarViewModel: TopBarViewModel = viewModel()
@@ -1224,7 +1229,8 @@ fun AppContent(
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 },
-                                topBarViewModel = topBarViewModel
+                                topBarViewModel = topBarViewModel,
+                                unreadMessagesCount = chatViewModel.unreadMessagesCount.collectAsState().value
                             )
                         }
                     }
