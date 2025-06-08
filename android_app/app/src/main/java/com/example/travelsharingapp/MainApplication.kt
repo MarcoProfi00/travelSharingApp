@@ -20,10 +20,10 @@ class MainApplication : Application(), ImageLoaderFactory {
         super.onCreate()
 
         Firebase.initialize(this)
-        Firebase.appCheck.installAppCheckProviderFactory(
-            //PlayIntegrityAppCheckProviderFactory.getInstance(),   // for production env
-            DebugAppCheckProviderFactory.getInstance(),             // for debug env
-        )
+//        Firebase.appCheck.installAppCheckProviderFactory(
+//            //PlayIntegrityAppCheckProviderFactory.getInstance(),   // for production env
+//            DebugAppCheckProviderFactory.getInstance(),             // for debug env
+//        )
 
         // Places API
         val apiKey = ManifestUtils.getApiKeyFromManifest(this)
