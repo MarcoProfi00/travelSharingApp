@@ -149,14 +149,30 @@ fun UserProfileScreen(
                         )
                     }
 
-                    UserInfoSection(
-                        userProfile = profile,
+                    Column (
                         modifier = Modifier
                             .weight(0.7f)
                             .imePadding()
                             .verticalScroll(rememberScrollState())
-                            .padding(start = 16.dp)
-                    )
+                            .padding(start = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        UserInfoSection(
+                            userProfile = profile,
+                            modifier = Modifier
+                                .fillMaxSize()
+                        )
+
+                        if (reviews.isNotEmpty()) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                            UserReviewPreviewSection(
+                                reviews = reviews,
+                                userViewModel = userViewModel,
+                                onViewAllClick = onNavigateToAllUserReviews,
+                                onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
+                            )
+                        }
+                    }
                 }
             }
             else -> {

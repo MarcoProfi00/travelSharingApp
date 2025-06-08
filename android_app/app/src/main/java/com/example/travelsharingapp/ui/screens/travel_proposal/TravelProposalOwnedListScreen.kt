@@ -97,7 +97,7 @@ fun TravelProposalOwnedListScreen(
     }
 
     val filteredProposals = ownedProposals.filter { proposal ->
-        statusFilter.isEmpty() || statusFilter.contains(proposal.status)
+        statusFilter.contains(proposal.status)
     }.sortedByDescending { it.startDate }
 
     LaunchedEffect(Unit) {
@@ -113,7 +113,7 @@ fun TravelProposalOwnedListScreen(
     }
 
     Column(
-        modifier = modifier .fillMaxSize()
+        modifier = modifier.fillMaxSize()
     ) {
         StatusFilterChips(
             selectedStatuses = statusFilter,
