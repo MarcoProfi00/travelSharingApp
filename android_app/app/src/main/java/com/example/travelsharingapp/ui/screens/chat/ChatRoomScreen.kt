@@ -12,8 +12,7 @@ import androidx.compose.material.icons.filled.Close
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.material3.AlertDialog
-import androidx.compose.foundation.clickable
+import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,9 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -57,6 +54,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.input.pointer.pointerInput
 import com.example.travelsharingapp.data.model.ChatMessage
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import kotlinx.coroutines.launch
@@ -76,6 +76,8 @@ fun ChatRoomScreen(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
+    val replyTarget = remember { mutableStateOf<ChatMessage?>(null) }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -85,10 +87,13 @@ fun ChatRoomScreen(
     val showMenu = remember { mutableStateOf(false) }
     val selectedMessage = remember { mutableStateOf<ChatMessage?>(null) }
 
-    val ownMessageColor = Color(0xFFD1C4E9) // Lavanda chiaro
-    val otherMessageColor = Color(0xFFE1F5FE) // Azzurro chiaro
+    val ownMessageColor   = MaterialTheme.colorScheme.primaryContainer
+    val otherMessageColor = MaterialTheme.colorScheme.surfaceVariant
 
-    LaunchedEffect(Unit) {
+    val ownTextColor   = MaterialTheme.colorScheme.onPrimaryContainer
+    val otherTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    LaunchedEffect(proposalId) {
         topBarViewModel.setConfig(
             title = "Group Chat",
             navigationIcon = {
@@ -168,7 +173,6 @@ fun ChatRoomScreen(
                                     Spacer(modifier = Modifier.width(28.dp))
                                 }
                             }
-
                             Column(
                                 modifier = Modifier
                                     .padding(horizontal = 4.dp)
@@ -185,6 +189,15 @@ fun ChatRoomScreen(
                                             }
                                         }
                                     )
+                                    .pointerInput(message) {
+                                        detectHorizontalDragGestures(
+                                            onDragEnd = {  }
+                                        ) { change, dragAmount ->
+                                            if (dragAmount > 120 && !isOwnMessage) {
+                                                replyTarget.value = message
+                                            }
+                                        }
+                                    }
                             ) {
                                 Column(
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -192,9 +205,38 @@ fun ChatRoomScreen(
                                     if (!isOwnMessage) {
                                         Text(
                                             text = message.senderName,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            color = otherTextColor,
                                             style = MaterialTheme.typography.labelSmall
                                         )
+                                    }
+
+                                    message.replyToMessageId?.let { quotedId ->
+                                        val quoted = messages.firstOrNull { it.messageId == quotedId }
+                                        val previewSender = quoted?.senderName
+                                        val previewText   = (quoted?.message ?: message.replyPreview).orEmpty()
+
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.surfaceVariant,
+                                            shape = RoundedCornerShape(6.dp),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(bottom = 4.dp)
+                                        ) {
+                                            Column(Modifier.padding(6.dp)) {
+                                                if (!previewSender.isNullOrBlank()) {
+                                                    Text(
+                                                        text = previewSender,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                                Text(
+                                                    text = previewText.take(80),
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+                                        }
                                     }
 
                                     if (message.imageUrl != null) {
@@ -210,7 +252,7 @@ fun ChatRoomScreen(
                                     if (message.message.isNotEmpty() || message.message == "__deleted__") {
                                         Text(
                                             text = if (message.message == "__deleted__") "This message was deleted." else message.message,
-                                            color = if (isOwnMessage) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                                            color = if (isOwnMessage) ownTextColor else otherTextColor,
                                             style = if (message.message == "__deleted__")
                                                 MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic)
                                             else
@@ -219,7 +261,7 @@ fun ChatRoomScreen(
                                     }
                                 }
 
-                                if (isOwnMessage) {
+                                if (isOwnMessage && message.message != "__deleted__") {
                                     DropdownMenu(
                                         expanded = expanded.value,
                                         onDismissRequest = { expanded.value = false }
@@ -282,8 +324,34 @@ fun ChatRoomScreen(
                 }
             }
         }
+        if (replyTarget.value != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = replyTarget.value!!.senderName,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = replyTarget.value!!.message.take(80),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                IconButton(onClick = { replyTarget.value = null }) {
+                    Icon(Icons.Default.Close, contentDescription = "Cancel reply")
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+        }
 
-        // Chat Input Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -321,9 +389,11 @@ fun ChatRoomScreen(
                     if (newMessage.isNotBlank() || selectedImageUri != null) {
                         val tempMessage = ChatMessage(
                             proposalId = proposalId,
-                            senderId = userId,
+                            senderId   = userId,
                             senderName = userName,
-                            message = newMessage.trim()
+                            message    = newMessage.trim(),
+                            replyToMessageId = replyTarget.value?.messageId,
+                            replyPreview     = replyTarget.value?.message?.take(80)
                         )
                         val imageToSend = selectedImageUri
 
@@ -345,6 +415,7 @@ fun ChatRoomScreen(
                                     imageUri = imageToSend
                                 )
                             }
+                            replyTarget.value = null
                         }
                     }
                 }

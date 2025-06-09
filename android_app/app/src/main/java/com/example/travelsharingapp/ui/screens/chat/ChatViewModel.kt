@@ -1,5 +1,6 @@
 package com.example.travelsharingapp.ui.screens.chat
 
+
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import android.app.Application
@@ -13,13 +14,19 @@ import com.example.travelsharingapp.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import android.content.Context
+import android.content.SharedPreferences
+import com.google.firebase.auth.FirebaseAuth
 
 class ChatViewModel(
     application: Application,
     private val chatRepository: ChatRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
 ) : AndroidViewModel(application) {
 
+
+    private val _unreadMessagesCount = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val unreadMessagesCount: StateFlow<Map<String, Int>> = _unreadMessagesCount
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages
@@ -29,8 +36,10 @@ class ChatViewModel(
 
     private val profileImageCache = mutableMapOf<String, String?>()
 
-    private val _unreadMessagesCount = MutableStateFlow<Map<String, Int>>(emptyMap())
-    val unreadMessagesCount: StateFlow<Map<String, Int>> = _unreadMessagesCount
+    private var currentUserId: String? = FirebaseAuth.getInstance().currentUser?.uid
+    fun setCurrentUserId(id: String) {
+        currentUserId = id
+    }
 
     fun setMessageToEdit(message: ChatMessage?) {
         _messageToEdit.value = message
@@ -86,12 +95,6 @@ class ChatViewModel(
                 url
             }
             message.copy(senderProfileImage = imageUrl)
-        }
-    }
-
-    fun updateUnreadMessages(proposalId: String, count: Int) {
-        _unreadMessagesCount.value = _unreadMessagesCount.value.toMutableMap().apply {
-            this[proposalId] = count
         }
     }
 }
