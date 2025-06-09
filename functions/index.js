@@ -561,6 +561,80 @@ exports.notifyOnUserPreferencesChange = onDocumentUpdated(
       return null;
     });
 
+// New message
+exports.notifyOnNewChatMessage = onDocumentCreated(
+    {
+      document: "travelProposals/{proposalId}/messages/{messageId}",
+      region: "us-east1",
+    },
+    async (event) => {
+      const messageData = event.data && event.data.data();
+      const {proposalId, messageId} = event.params;
+
+      if (!messageData || !proposalId || !messageId) return;
+
+      const senderId = messageData.senderId;
+      const senderName = messageData.senderName || "Someone";
+
+      // Recupera i dati della proposta di viaggio
+      const travelDoc = await admin.firestore()
+          .collection("travelProposals")
+          .doc(proposalId)
+          .get();
+
+      if (!travelDoc.exists) return;
+      const travelData = travelDoc.data();
+      const organizerId = travelData.organizerId || null;
+      const travelName = travelData.name || "a trip";
+
+      // Recupera tutti gli utenti con candidatura accettata
+      const applicationsSnapshot = await admin.firestore()
+          .collection("travel_applications")
+          .where("proposalId", "==", proposalId)
+          .where("status", "==", "Accepted")
+          .get();
+
+      const participants = applicationsSnapshot.docs.map((doc) => doc.data().userId);
+
+      // Prepara i destinatari, escludendo il mittente
+      const allRecipients = new Set([...participants]);
+      if (organizerId) allRecipients.add(organizerId);
+      allRecipients.delete(senderId);
+
+      // Invia la notifica a ogni destinatario
+      for (const recipientId of allRecipients) {
+        const userDoc = await admin.firestore()
+            .collection("users")
+            .doc(recipientId)
+            .get();
+
+        const fcmTokens = userDoc.data() && userDoc.data().fcmTokens;
+        if (!fcmTokens || fcmTokens.length === 0) continue;
+
+        const notificationTitle = `New message in "${travelName}"`;
+        const notificationMessage = `${senderName} sent a new message`;
+
+        const dataPayload = {
+          proposalId,
+          messageId,
+          relatedUserId: senderId,
+        };
+
+        await deliverNotification(
+            recipientId,
+            "new_chat_message",
+            notificationTitle,
+            notificationMessage,
+            dataPayload,
+            fcmTokens,
+        );
+      }
+
+      return null;
+    },
+);
+
+
 /**
  * Generate a valid path after thumbnail creation, and update the correct document
  * (travel proposal or user)
