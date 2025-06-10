@@ -75,6 +75,7 @@ import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -189,59 +190,66 @@ fun ChatRoomScreen(
                             }
                         }
 
-                        val user by userProfileViewModel.observeUserProfileById(message.senderId).collectAsState()
-                        user?.let {
-                            MessageCard(
-                                modifier = Modifier
-                                    .offset { IntOffset(offsetX.roundToInt(), 0) }
-                                    .padding(top = paddingTop)
-                                    .pointerInput(message) {
-                                        detectHorizontalDragGestures(
-                                            onDragStart = {
-                                                offsetX = 0f
-                                            },
-                                            onHorizontalDrag = { pointerInputChange, dragAmount ->
-                                                pointerInputChange.consume()
-                                                offsetX += dragAmount
-                                            },
-                                            onDragEnd = {
-                                                if (offsetX > 80f) {
-                                                    replyTarget = message
+                        val showDivider = previousMessage == null || !isSameDay(message.timestamp, previousMessage.timestamp)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            if (showDivider) {
+                                DateDivider(date = formatDateForDivider(message.timestamp))
+                            }
+
+                            val user by userProfileViewModel.observeUserProfileById(message.senderId).collectAsState()
+                            user?.let {
+                                MessageCard(
+                                    modifier = Modifier
+                                        .offset { IntOffset(offsetX.roundToInt(), 0) }
+                                        .padding(top = paddingTop)
+                                        .pointerInput(message) {
+                                            detectHorizontalDragGestures(
+                                                onDragStart = {
+                                                    offsetX = 0f
+                                                },
+                                                onHorizontalDrag = { pointerInputChange, dragAmount ->
+                                                    pointerInputChange.consume()
+                                                    offsetX += dragAmount
+                                                },
+                                                onDragEnd = {
+                                                    if (offsetX > 80f) {
+                                                        replyTarget = message
+                                                    }
+                                                    offsetX = 0f
+                                                },
+                                                onDragCancel = {
+                                                    offsetX = 0f
                                                 }
-                                                offsetX = 0f
-                                            },
-                                            onDragCancel = {
-                                                offsetX = 0f
-                                            }
+                                            )
+                                        },
+                                    message = message,
+                                    isOwnMessage = isOwnMessage,
+                                    isNewSender = isNewSender,
+                                    user = user,
+                                    userProfileViewModel = userProfileViewModel,
+                                    onLongClick = {
+                                        if (isOwnMessage) {
+                                            selectedMessage = message
+                                            expanded = true
+                                        }
+                                    },
+                                    onEdit = {
+                                        newMessage = message.message
+                                        chatViewModel.setMessageToEdit(message)
+                                        expanded = false
+                                    },
+                                    onDelete = {
+                                        chatViewModel.deleteMessage(
+                                            proposalId = proposalId,
+                                            message = message
                                         )
-                                },
-                                message = message,
-                                isOwnMessage = isOwnMessage,
-                                isNewSender = isNewSender,
-                                user = user,
-                                userProfileViewModel = userProfileViewModel,
-                                onLongClick = {
-                                    if (isOwnMessage) {
-                                        selectedMessage = message
-                                        expanded = true
-                                    }
-                                },
-                                onEdit = {
-                                    newMessage = message.message
-                                    chatViewModel.setMessageToEdit(message)
-                                    expanded = false
-                                },
-                                onDelete = {
-                                    chatViewModel.deleteMessage(
-                                        proposalId = proposalId,
-                                        message = message
-                                    )
-                                    expanded = false
-                                },
-                                expanded = expanded,
-                                onDismiss = { expanded = false },
-                                onQuoteClicked = onQuoteClicked
-                            )
+                                        expanded = false
+                                    },
+                                    expanded = expanded,
+                                    onDismiss = { expanded = false },
+                                    onQuoteClicked = onQuoteClicked
+                                )
+                            }
                         }
                     }
                 )
@@ -564,6 +572,52 @@ fun MessageInput (
 
         IconButton(onClick = onSendClick) {
             Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+        }
+    }
+}
+
+@Composable
+fun DateDivider(date: String) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Text(
+            text = date,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+        )
+    }
+}
+
+fun isSameDay(timestamp1: Timestamp, timestamp2: Timestamp): Boolean {
+    val cal1 = Calendar.getInstance().apply { time = timestamp1.toDate() }
+    val cal2 = Calendar.getInstance().apply { time = timestamp2.toDate() }
+    return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+            cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+}
+
+fun formatDateForDivider(timestamp: Timestamp): String {
+    val now = Calendar.getInstance()
+
+    return when {
+        isSameDay(timestamp, now.timeInMillis.let { Timestamp(it / 1000, (it % 1000).toInt() * 1_000_000) }) -> "Today"
+
+        else -> {
+            val yesterday = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }
+            if (isSameDay(timestamp, yesterday.timeInMillis.let { Timestamp(it / 1000, (it % 1000).toInt() * 1_000_000) })) {
+                "Yesterday"
+            } else {
+                SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()).format(timestamp.toDate())
+            }
         }
     }
 }
