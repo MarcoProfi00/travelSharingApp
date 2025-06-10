@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Badge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel

@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
+import coil.compose.AsyncImage
 import com.example.travelsharingapp.data.model.ChatMessage
 import com.example.travelsharingapp.ui.screens.chat.ChatViewModel
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
