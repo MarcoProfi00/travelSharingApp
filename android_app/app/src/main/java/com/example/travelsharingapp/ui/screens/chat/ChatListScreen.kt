@@ -111,7 +111,6 @@ fun ChatListScreen(
         acceptedApplications.any { it.proposalId == proposal.proposalId }
     }
 
-
     val tabs = listOf(
         TabItem("Own travel", Icons.Default.AccountCircle),
         TabItem("Applied to", Icons.Default.PersonAdd)
@@ -243,7 +242,7 @@ fun ChatListScreen(
                                             style = MaterialTheme.typography.titleMedium,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
-                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Spacer(modifier = Modifier.weight(1f))
 
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,

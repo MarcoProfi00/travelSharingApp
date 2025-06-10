@@ -16,7 +16,7 @@ class ChatRepository(private val context: Context) {
         db.collection("travelProposals")
             .document(proposalId)
             .collection("messages")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
                     onResult(emptyList())

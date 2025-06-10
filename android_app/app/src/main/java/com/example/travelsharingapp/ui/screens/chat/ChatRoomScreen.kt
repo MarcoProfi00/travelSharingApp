@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -59,6 +60,7 @@ import coil.compose.AsyncImage
 import com.example.travelsharingapp.data.model.ChatMessage
 import com.example.travelsharingapp.ui.screens.chat.ChatViewModel
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
+import com.example.travelsharingapp.ui.screens.travel_application.ProfileAvatar
 import kotlinx.coroutines.launch
 
 @Composable
@@ -76,8 +78,6 @@ fun ChatRoomScreen(
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
-    val replyTarget = remember { mutableStateOf<ChatMessage?>(null) }
-
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -86,12 +86,18 @@ fun ChatRoomScreen(
 
     val showMenu = remember { mutableStateOf(false) }
     val selectedMessage = remember { mutableStateOf<ChatMessage?>(null) }
+    val replyTarget = remember { mutableStateOf<ChatMessage?>(null) }
 
     val ownMessageColor   = MaterialTheme.colorScheme.primaryContainer
     val otherMessageColor = MaterialTheme.colorScheme.surfaceVariant
-
     val ownTextColor   = MaterialTheme.colorScheme.onPrimaryContainer
     val otherTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(Unit) {
+        chatViewModel.observeMessages(proposalId)
+    }
 
     LaunchedEffect(proposalId) {
         topBarViewModel.setConfig(
@@ -103,13 +109,11 @@ fun ChatRoomScreen(
             },
             actions = null
         )
-        chatViewModel.observeMessages(proposalId)
     }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp)
             .imePadding()
     ) {
         if (messages.isEmpty()) {
@@ -127,8 +131,6 @@ fun ChatRoomScreen(
                 )
             }
         } else {
-            val listState = rememberLazyListState()
-            val sortedMessages = messages.sortedBy { it.timestamp }
             LaunchedEffect(messages.size) {
                 if (messages.isNotEmpty()) {
                     listState.animateScrollToItem(messages.lastIndex)
@@ -138,16 +140,17 @@ fun ChatRoomScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier
+                    .padding(horizontal = 16.dp)
                     .weight(1f)
                     .fillMaxWidth(),
-                //reverseLayout = true
+                contentPadding = PaddingValues(bottom = 16.dp),
             ) {
                 items(
-                    count = sortedMessages.size,
-                    key = { index -> sortedMessages[index].messageId },
+                    count = messages.size,
+                    key = { index -> messages[index].messageId },
                     contentType = { "MessageCard" },
                     itemContent = { index ->
-                        val message = sortedMessages[index]
+                        val message = messages[index]
                         val isOwnMessage = message.senderId == userId
                         val expanded = remember { mutableStateOf(false) }
 
@@ -324,6 +327,7 @@ fun ChatRoomScreen(
                 }
             }
         }
+
         if (replyTarget.value != null) {
             Row(
                 modifier = Modifier
@@ -354,10 +358,9 @@ fun ChatRoomScreen(
 
         Row(
             modifier = Modifier
+                .padding(vertical = 16.dp)
                 .fillMaxWidth()
-                .padding(8.dp)
-                .imePadding()
-                .navigationBarsPadding(),
+                .height(56.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
@@ -369,19 +372,18 @@ fun ChatRoomScreen(
             TextField(
                 value = newMessage,
                 onValueChange = { newMessage = it },
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 56.dp),
+                modifier = Modifier.weight(1f),
                 placeholder = { Text("Type a message") },
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent
                 ),
                 shape = RoundedCornerShape(24.dp),
                 singleLine = false,
                 maxLines = 4,
             )
-
             Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(
@@ -423,19 +425,5 @@ fun ChatRoomScreen(
                 Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
             }
         }
-
     }
-}
-
-@Composable
-fun ProfileAvatar(imageSize: Dp, imageUrl: String?) {
-    AsyncImage(
-        model = imageUrl,
-        contentDescription = "Profile Image",
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .size(imageSize)
-            .clip(CircleShape)
-            .background(Color.Gray)
-    )
 }
