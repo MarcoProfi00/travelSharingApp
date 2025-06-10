@@ -32,7 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Badge
+import androidx.compose.foundation.layout.Box
 import coil.compose.AsyncImage
 import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
@@ -48,11 +49,12 @@ fun ChatListScreen(
     onNavigateToChat: (String) -> Unit,
     onNavigateBack: () -> Unit,
     topBarViewModel: TopBarViewModel,
-    unreadMessagesCount: Map<String, Int>
+    chatViewModel: ChatViewModel
 ) {
     val allProposals by travelProposalViewModel.allProposals.collectAsState()
     val ownedProposals by travelProposalViewModel.ownedProposals.collectAsState()
     val applications by travelApplicationViewModel.userSpecificApplications.collectAsState()
+    val unreadCounts by chatViewModel.unreadMessagesCount.collectAsState()
 
     LaunchedEffect(Unit) {
 
@@ -95,7 +97,7 @@ fun ChatListScreen(
                 val cardColor = if (index % 2 == 0)
                     MaterialTheme.colorScheme.secondaryContainer
                 else
-                    Color(0xFFE8EAF6)
+                    MaterialTheme.colorScheme.tertiaryContainer
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -124,7 +126,8 @@ fun ChatListScreen(
                                         .matchParentSize()
                                         .clip(RoundedCornerShape(12.dp))
                                 )
-                                if ((unreadMessagesCount[proposal.proposalId] ?: 0) > 0) {
+                                val count = unreadCounts[proposal.proposalId] ?: 0
+                                if (count > 0) {
                                     Badge(
                                         containerColor = MaterialTheme.colorScheme.error,
                                         modifier = Modifier
@@ -132,7 +135,7 @@ fun ChatListScreen(
                                             .padding(2.dp)
                                     ) {
                                         Text(
-                                            text = unreadMessagesCount[proposal.proposalId].toString(),
+                                            text = count.toString(),
                                             color = MaterialTheme.colorScheme.onError,
                                             style = MaterialTheme.typography.labelSmall
                                         )

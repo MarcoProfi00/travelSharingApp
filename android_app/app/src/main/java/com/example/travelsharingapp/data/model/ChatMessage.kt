@@ -10,5 +10,7 @@ data class ChatMessage(
     val senderProfileImage: String? = null,
     val message: String = "",
     val imageUrl: String? = null,
-    val timestamp: Timestamp = Timestamp.now()
+    val timestamp: Timestamp = Timestamp.now(),
+    val replyToMessageId: String? = null,
+    val replyPreview: String? = null
 )

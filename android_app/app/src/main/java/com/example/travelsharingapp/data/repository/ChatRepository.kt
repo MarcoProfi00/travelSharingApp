@@ -108,4 +108,38 @@ class ChatRepository(private val context: Context) {
             messageRef.set(chatMessage).await()
         }
     }
+
+    suspend fun updateLastReadTimestamp(proposalId: String, userId: String) {
+        val now = com.google.firebase.Timestamp.now()
+        FirebaseFirestore.getInstance()
+            .collection("travelProposals")
+            .document(proposalId)
+            .collection("readStatus")
+            .document(userId)
+            .set(mapOf("lastReadTimestamp" to now))
+            .await()
+    }
+
+    suspend fun getLastReadTimestamp(proposalId: String, userId: String): com.google.firebase.Timestamp? {
+        val doc = FirebaseFirestore.getInstance()
+            .collection("travelProposals")
+            .document(proposalId)
+            .collection("readStatus")
+            .document(userId)
+            .get()
+            .await()
+        return doc.getTimestamp("lastReadTimestamp")
+    }
+
+    suspend fun getRecentMessages(proposalId: String): List<ChatMessage> {
+        val snapshot = db.collection("travelProposals")
+            .document(proposalId)
+            .collection("messages")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(50)
+            .get()
+            .await()
+
+        return snapshot.documents.mapNotNull { it.toObject(ChatMessage::class.java) }
+    }
 }

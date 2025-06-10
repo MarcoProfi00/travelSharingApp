@@ -1217,6 +1217,9 @@ fun AppContent(
                     //Chat
                     composable(AppRoutes.CHAT_LIST) {
                         if (currentUser != null) {
+                            LaunchedEffect(currentUser.uid) {
+                                chatViewModel.setCurrentUserId(currentUser.uid)
+                            }
                             ChatListScreen(
                                 modifier = Modifier.padding(innerPadding),
                                 userId = currentUser.uid,
@@ -1229,7 +1232,7 @@ fun AppContent(
                                     navController.popBackStack()
                                 },
                                 topBarViewModel = topBarViewModel,
-                                unreadMessagesCount = chatViewModel.unreadMessagesCount.collectAsState().value
+                                chatViewModel = chatViewModel
                             )
                         }
                     }
