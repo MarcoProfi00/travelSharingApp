@@ -137,6 +137,7 @@ import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.firebase.BuildConfig
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -414,7 +415,6 @@ fun AppContent(
         travelReviewViewModel.clearTravelReviewData()
         userReviewViewModel.clearUserReviewData()
         notificationsViewModel.clearNotificationData()
-        // chatViewModel.clearChatData()
     }
 
     val firebaseAuth = FirebaseAuth.getInstance()
@@ -438,7 +438,6 @@ fun AppContent(
 
     val currentCollectedAuthState = authState
     val currentUser = (currentCollectedAuthState as? AuthState.Authenticated)?.user
-
 
     var showAccountCollisionDialog by rememberSaveable { mutableStateOf(false) }
     var collisionDetails by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }

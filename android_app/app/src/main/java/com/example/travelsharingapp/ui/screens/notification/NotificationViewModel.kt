@@ -1,6 +1,5 @@
 package com.example.travelsharingapp.ui.screens.notification
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -40,20 +39,17 @@ class NotificationViewModel(
         viewModelScope.launch {
             try {
                 repository.markNotificationAsRead(userId, notificationId)
-            } catch (e: Exception) {
-                Log.e("NotifVM", "Error marking notification $notificationId as read", e)
+            } catch (_: Exception) {
             }
         }
     }
 
     fun deleteNotificationOnClick(userId: String, notificationId: String) {
         viewModelScope.launch {
-            Log.d("NotifVM", "Notification $notificationId for user $userId clicked. Attempting to delete.")
             try {
                 repository.deleteNotification(userId, notificationId)
                 _notifications.value = _notifications.value.filterNot { it.notificationId == notificationId }
-            } catch (e: Exception) {
-                Log.e("NotifVM", "Failed to delete notification $notificationId for user $userId", e)
+            } catch (_: Exception) {
             }
         }
     }

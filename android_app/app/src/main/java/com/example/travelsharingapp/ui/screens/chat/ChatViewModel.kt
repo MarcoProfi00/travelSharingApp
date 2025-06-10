@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.travelsharingapp.data.model.ChatMessage
+import com.example.travelsharingapp.data.model.UserProfile
 import com.example.travelsharingapp.data.repository.ChatRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,23 +16,22 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.asStateFlow
 
 class ChatViewModel(
-    private val chatRepository: ChatRepository,
+    private val chatRepository: ChatRepository
 ) : ViewModel() {
-
-
-    private val _unreadMessagesCount = MutableStateFlow<Map<String, Int>>(emptyMap())
-    val unreadMessagesCount: StateFlow<Map<String, Int>> = _unreadMessagesCount
-
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages
 
     private val _messageToEdit: MutableState<ChatMessage?> = mutableStateOf(null)
     val messageToEdit: MutableState<ChatMessage?> = _messageToEdit
 
+    private val _unreadMessagesCount = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val unreadMessagesCount: StateFlow<Map<String, Int>> = _unreadMessagesCount
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private var messagesListenerJob: Job? = null
+    private var unreadCountJobs = mutableMapOf<String, Job>()
 
     fun startListeningMessagesByProposalId(proposalId: String) {
         messagesListenerJob?.cancel()
@@ -47,10 +47,6 @@ class ChatViewModel(
 
     fun setMessageToEdit(message: ChatMessage?) {
         _messageToEdit.value = message
-    }
-
-    suspend fun sendMessage(proposalId: String, message: ChatMessage) {
-        chatRepository.sendMessage(proposalId, message)
     }
 
     fun updateMessage(proposalId: String, messageId: String, newText: String) {
@@ -79,6 +75,31 @@ class ChatViewModel(
             }
 
             chatRepository.sendMessage(proposalId, finalMsg)
+        }
+    }
+
+    fun listenForUnreadCounts(proposalIds: List<String>, userId: String) {
+        (proposalIds.toSet()).forEach {
+            unreadCountJobs[it]?.cancel()
+            unreadCountJobs.remove(it)
+        }
+
+        proposalIds.forEach { proposalId ->
+            if (!unreadCountJobs.containsKey(proposalId)) {
+                unreadCountJobs[proposalId] = viewModelScope.launch {
+                    chatRepository.getUnreadMessagesCount(proposalId, userId).collect { count ->
+                        _unreadMessagesCount.value = _unreadMessagesCount.value.toMutableMap().apply {
+                            this[proposalId] = count
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fun markMessagesAsRead(proposalId: String, userId: String) {
+        viewModelScope.launch {
+            chatRepository.updateLastReadTimestamp(proposalId, userId)
         }
     }
 }

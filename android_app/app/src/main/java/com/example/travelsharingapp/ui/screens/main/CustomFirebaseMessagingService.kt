@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.media.RingtoneManager
-import android.util.Log
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -27,9 +26,7 @@ import kotlinx.coroutines.runBlocking
 import java.util.concurrent.atomic.AtomicInteger
 
 class CustomFirebaseMessagingService: FirebaseMessagingService() {
-
     companion object {
-        private const val TAG = "CustomFirebaseMessagingService"
         const val DEFAULT_CHANNEL_ID = "toTravel_default_channel"
     }
 
@@ -46,21 +43,13 @@ class CustomFirebaseMessagingService: FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        remoteMessage.notification?.let {
-            Log.d(TAG, "Message Notification Title: ${it.title}, Body: ${it.body}")
-        }
-
         val data = remoteMessage.data
         val recipientId = data["recipientId"]
         val currentLoggedInUserId = FirebaseAuth.getInstance().currentUser?.uid
 
-        if (recipientId == null) {
-            Log.w(TAG, "Notification received without targetUserId.")
-        } else if (currentLoggedInUserId == null || recipientId != currentLoggedInUserId) {
-            Log.d(TAG, "Notification's targetUserId ($recipientId) does not match current user ($currentLoggedInUserId) or no user logged in.")
+        if (currentLoggedInUserId == null || recipientId != currentLoggedInUserId) {
             return
         }
-        Log.d(TAG, "Notification is for current user (Target: $recipientId, Current: $currentLoggedInUserId).")
 
         val title = data["title"] ?: "New Notification"
         val body = data["body"] ?: "You have a new message."
@@ -78,7 +67,6 @@ class CustomFirebaseMessagingService: FirebaseMessagingService() {
 
                 val masterEnabled = preferences[NotificationPreferenceKeys.MASTER_NOTIFICATIONS_ENABLED] != false
                 if (!masterEnabled) {
-                    Log.d(TAG, "Master notifications disabled.")
                     return@runBlocking false
                 }
 
@@ -92,14 +80,8 @@ class CustomFirebaseMessagingService: FirebaseMessagingService() {
                 }
 
                 val typeEnabled = preferences[notificationType.dataStoreKey] != false
-                if (!typeEnabled) {
-                    Log.d(TAG, "Notification type '${notificationType.displayName}' disabled.")
-                    return@runBlocking false
-                }
-
-                return@runBlocking true
-            } catch (e: Exception) {
-                Log.e(TAG, "Error reading notification preferences from DataStore", e)
+                return@runBlocking typeEnabled
+            } catch (_: Exception) {
                 return@runBlocking true
             }
         }
@@ -113,7 +95,6 @@ class CustomFirebaseMessagingService: FirebaseMessagingService() {
         val proposalId = data["proposalId"]
         var deepLinkUriString: String? = null
 
-        Log.d(TAG, "Attempting to build deep link. Type: $notificationType, ProposalID: $proposalId")
         when (notificationType) {
             NotificationType.NEW_TRAVEL_REVIEW.key -> if (proposalId != null) {
                 deepLinkUriString = "myapp://travelsharingapp.example.com/reviewViewAll/$proposalId"
@@ -136,16 +117,12 @@ class CustomFirebaseMessagingService: FirebaseMessagingService() {
                 deepLinkUriString = "myapp://travelsharingapp.example.com/chat/$proposalId"
             }
             else -> {
-                Log.w(TAG, "Unknown or unhandled notificationType for deep linking: $notificationType")
             }
         }
 
         if (deepLinkUriString != null) {
             intent.action = Intent.ACTION_VIEW
             intent.data = deepLinkUriString.toUri()
-            Log.d(TAG, "Created deep link intent with URI: $deepLinkUriString for notificationType: $notificationType")
-        } else {
-            Log.w(TAG, "Could not construct deep link URI for notificationType: $notificationType, data: $data.")
         }
 
         val notificationId = notificationIdCounter.incrementAndGet()

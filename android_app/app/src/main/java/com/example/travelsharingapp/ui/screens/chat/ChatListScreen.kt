@@ -12,29 +12,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Upcoming
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Badge
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,15 +34,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,7 +49,6 @@ import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.data.model.ProposalStatus
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
-import com.example.travelsharingapp.ui.screens.travel_proposal.JoinedTravelProposalCard
 import com.example.travelsharingapp.ui.screens.travel_proposal.TabItem
 import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalViewModel
 import com.example.travelsharingapp.ui.screens.travel_proposal.determineTravelDisplayStatus
@@ -86,7 +71,6 @@ fun ChatListScreen(
     val unreadCounts by chatViewModel.unreadMessagesCount.collectAsState()
 
     LaunchedEffect(Unit) {
-
         topBarViewModel.setConfig(
             title = "Chat",
             navigationIcon = {
@@ -109,6 +93,11 @@ fun ChatListScreen(
 
     val joinedProposals = allProposals.filter { proposal ->
         acceptedApplications.any { it.proposalId == proposal.proposalId }
+    }
+
+    LaunchedEffect(ownedProposals, joinedProposals) {
+        val allChatIds = (ownedProposals.map { it.proposalId } + joinedProposals.map { it.proposalId }).distinct()
+        chatViewModel.listenForUnreadCounts(allChatIds, userId)
     }
 
     val tabs = listOf(
@@ -212,21 +201,6 @@ fun ChatListScreen(
                                                 .height(120.dp),
                                             contentScale = ContentScale.Crop
                                         )
-                                        val count = unreadCounts[proposal.proposalId] ?: 0
-                                        if (count > 0) {
-                                            Badge(
-                                                containerColor = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier
-                                                    .align(Alignment.TopEnd)
-                                                    .padding(2.dp)
-                                            ) {
-                                                Text(
-                                                    text = count.toString(),
-                                                    color = MaterialTheme.colorScheme.onError,
-                                                    style = MaterialTheme.typography.labelSmall
-                                                )
-                                            }
-                                        }
                                     }
 
                                     Spacer(Modifier.width(16.dp))
@@ -237,12 +211,29 @@ fun ChatListScreen(
                                             .fillMaxSize()
                                             .padding(vertical = 16.dp)
                                     ) {
-                                        Text(
-                                            text = proposal.name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(modifier = Modifier.weight(1f))
+                                        Row {
+                                            Text(
+                                                text = proposal.name,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Spacer(modifier = Modifier.weight(1f))
+
+                                            val count = unreadCounts[proposal.proposalId] ?: 0
+                                            if (count > 0) {
+                                                Badge(
+                                                    containerColor = MaterialTheme.colorScheme.error,
+                                                ) {
+                                                    Text(
+                                                        text = count.toString(),
+                                                        color = MaterialTheme.colorScheme.onError,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(4.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
 
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
@@ -284,95 +275,3 @@ fun ChatListScreen(
         }
     }
 }
-
-@Composable
-fun ChatBubbleCard(
-    message: ChatMessage,
-    currentUserId: String,
-    index: Int
-) {
-    val isCurrentUser = message.senderId == currentUserId
-
-    val backgroundColor = if (isCurrentUser) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.tertiaryContainer
-    }
-
-    Row(
-        horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        ElevatedCard(
-            shape = RoundedCornerShape(12.dp),
-            colors = androidx.compose.material3.CardDefaults.elevatedCardColors(
-                containerColor = backgroundColor,
-                contentColor = MaterialTheme.colorScheme.onSurface
-            ),
-            elevation = androidx.compose.material3.CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
-            modifier = Modifier.padding(8.dp)
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = message.senderName,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = message.text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = message.timestamp,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun ChatScreen(
-    messages: List<ChatMessage>,
-    currentUserId: String
-) {
-    var lastSenderId by remember { mutableStateOf<String?>(null) }
-    var lastMessageWasFile by remember { mutableStateOf(false) }
-
-    LazyColumn(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        items(messages.size) { index ->
-            val message = messages[index]
-            val isFileMessage = message.isFileMessage
-
-            val showFileHeader = (lastSenderId != message.senderId) || (lastMessageWasFile != isFileMessage && isFileMessage)
-
-            if (showFileHeader && isFileMessage) {
-                Text(
-                    text = "${message.senderName} sent file(s)",
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            ChatBubbleCard(message = message, currentUserId = currentUserId, index = index)
-
-            lastSenderId = message.senderId
-            lastMessageWasFile = isFileMessage
-        }
-    }
-}
-
-data class ChatMessage(
-    val senderId: String,
-    val senderName: String,
-    val text: String,
-    val timestamp: String,
-    val isFileMessage: Boolean = false
-)

@@ -95,27 +95,8 @@ class ChatRepository(private val context: Context) {
             }
 
             ref.downloadUrl.await().toString()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
-        }
-    }
-
-    suspend fun sendImageMessage(proposalId: String, senderId: String, senderName: String, imageUri: Uri) {
-        val messagessCollection = collection.document(proposalId)
-            .collection("messages")
-
-        val imageUrl = uploadChatImage(proposalId, imageUri)
-        if (imageUrl != null) {
-            val messageRef = messagessCollection.document()
-
-            val chatMessage = ChatMessage(
-                messageId = messageRef.id,
-                proposalId = proposalId,
-                senderId = senderId,
-                message = "",
-                imageUrl = imageUrl
-            )
-            messageRef.set(chatMessage).await()
         }
     }
 
@@ -130,26 +111,51 @@ class ChatRepository(private val context: Context) {
             .await()
     }
 
-    suspend fun getLastReadTimestamp(proposalId: String, userId: String): com.google.firebase.Timestamp? {
-        val doc = FirebaseFirestore.getInstance()
-            .collection("travelProposals")
+    fun getUnreadMessagesCount(proposalId: String, userId: String): Flow<Int> = callbackFlow {
+        val readStatusRef = db.collection("travelProposals")
             .document(proposalId)
             .collection("readStatus")
             .document(userId)
-            .get()
-            .await()
-        return doc.getTimestamp("lastReadTimestamp")
-    }
 
-    suspend fun getRecentMessages(proposalId: String): List<ChatMessage> {
-        val snapshot = db.collection("travelProposals")
+        val messagesRef = db.collection("travelProposals")
             .document(proposalId)
             .collection("messages")
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(50)
-            .get()
-            .await()
 
-        return snapshot.documents.mapNotNull { it.toObject(ChatMessage::class.java) }
+        var messagesListener: ListenerRegistration? = null
+
+        val readStatusListener = readStatusRef.addSnapshotListener { readStatusSnapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+
+            messagesListener?.remove()
+
+            val lastReadTimestamp = readStatusSnapshot?.getTimestamp("lastReadTimestamp")
+
+            val query = if (lastReadTimestamp != null) {
+                messagesRef.whereGreaterThan("timestamp", lastReadTimestamp)
+            } else {
+                messagesRef
+            }
+
+            messagesListener = query.addSnapshotListener { messagesSnapshot, messagesError ->
+                if (messagesError != null) {
+                    println("Error listening for unread messages: $messagesError")
+                    return@addSnapshotListener
+                }
+
+                val unreadCount = messagesSnapshot?.documents?.count { doc ->
+                    doc.getString("senderId") != userId
+                } ?: 0
+
+                trySend(unreadCount)
+            }
+        }
+
+        awaitClose {
+            readStatusListener.remove()
+            messagesListener?.remove()
+        }
     }
 }
