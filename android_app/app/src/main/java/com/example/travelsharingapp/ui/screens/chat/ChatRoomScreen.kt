@@ -323,9 +323,7 @@ fun ChatRoomScreen(
                         message    = newMessage.trim(),
                         replyToMessage = replyTarget
                     )
-
                     newMessage = ""
-                    selectedImageUri = null
 
                     coroutineScope.launch {
                         if (chatViewModel.messageToEdit.value != null) {
@@ -341,6 +339,7 @@ fun ChatRoomScreen(
                                 message = tempMessage,
                                 imageUri = selectedImageUri
                             )
+                            selectedImageUri = null
                         }
                         replyTarget = null
                     }
@@ -374,7 +373,7 @@ fun MessageCard(
         modifier = modifier
             .fillMaxWidth(),
         horizontalArrangement = if (isOwnMessage) Arrangement.End else Arrangement.Start,
-        verticalAlignment = Alignment.Bottom
+        verticalAlignment = Alignment.Top
     ) {
         if (!isOwnMessage) {
             if (isNewSender) {
