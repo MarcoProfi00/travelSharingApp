@@ -209,7 +209,9 @@ fun ChatRoomScreen(
                                                 },
                                                 onHorizontalDrag = { pointerInputChange, dragAmount ->
                                                     pointerInputChange.consume()
-                                                    offsetX += dragAmount
+                                                    if (dragAmount > 0 || offsetX > 0) {
+                                                        offsetX = (offsetX + dragAmount).coerceAtLeast(0f)
+                                                    }
                                                 },
                                                 onDragEnd = {
                                                     if (offsetX > 80f) {
