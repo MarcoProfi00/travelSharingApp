@@ -141,7 +141,6 @@ import com.google.firebase.BuildConfig
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.collections.listOf
 
 enum class BottomTab {
     Explore,

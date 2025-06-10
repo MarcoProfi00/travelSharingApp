@@ -1,5 +1,6 @@
 package com.example.travelsharingapp.data.repository
 
+import android.content.Context
 import android.net.Uri
 import com.example.travelsharingapp.data.model.ChatMessage
 import com.google.firebase.firestore.FirebaseFirestore
@@ -7,8 +8,6 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
-import android.content.ContentResolver
-import android.content.Context
 
 class ChatRepository(private val context: Context) {
     private val db = FirebaseFirestore.getInstance()

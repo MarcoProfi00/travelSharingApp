@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.pager.HorizontalPager
@@ -32,7 +31,6 @@ import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,18 +52,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
-
 import com.example.travelsharingapp.R
 import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.data.model.ProposalStatus
 import com.example.travelsharingapp.data.model.TravelProposal
-import com.example.travelsharingapp.ui.screens.main.AppRoutes
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
-import com.google.android.play.integrity.internal.ac
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
 import java.time.LocalDate

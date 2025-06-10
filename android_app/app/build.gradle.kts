@@ -1,6 +1,6 @@
-import java.util.Properties
 import java.io.FileInputStream
 import java.io.FileNotFoundException
+import java.util.Properties
 
 val secretsFile = rootProject.file("secrets.properties")
 val secretsProperties = Properties()

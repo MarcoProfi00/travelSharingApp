@@ -11,6 +11,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.example.travelsharingapp.R
@@ -24,7 +25,6 @@ import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.atomic.AtomicInteger
-import androidx.core.net.toUri
 
 class CustomFirebaseMessagingService: FirebaseMessagingService() {
 

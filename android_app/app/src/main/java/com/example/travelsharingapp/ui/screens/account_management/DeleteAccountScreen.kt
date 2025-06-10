@@ -46,8 +46,6 @@ import androidx.compose.ui.unit.dp
 import com.example.travelsharingapp.ui.screens.authentication.AccountDeleteState
 import com.example.travelsharingapp.ui.screens.authentication.AuthViewModel
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
-import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalViewModel
-import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 

@@ -34,7 +34,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.travelsharingapp.data.model.UserProfile
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.ProfileAvatar
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel

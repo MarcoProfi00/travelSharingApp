@@ -21,9 +21,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.travelsharingapp.data.repository.AuthPreferenceKeys
 import com.example.travelsharingapp.data.repository.UserRepository
 import com.example.travelsharingapp.data.repository.dataStoreInstance
-import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
-import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalViewModel
-import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
 import com.example.travelsharingapp.utils.FcmTokenManager
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
