@@ -1,26 +1,22 @@
 package com.example.travelsharingapp.ui.screens.chat
 
-
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import android.app.Application
 import android.net.Uri
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.travelsharingapp.data.model.ChatMessage
 import com.example.travelsharingapp.data.repository.ChatRepository
-import com.example.travelsharingapp.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.asStateFlow
 
 class ChatViewModel(
-    application: Application,
     private val chatRepository: ChatRepository,
-    private val userRepository: UserRepository,
-) : AndroidViewModel(application) {
+) : ViewModel() {
 
 
     private val _unreadMessagesCount = MutableStateFlow<Map<String, Int>>(emptyMap())
@@ -32,23 +28,25 @@ class ChatViewModel(
     private val _messageToEdit: MutableState<ChatMessage?> = mutableStateOf(null)
     val messageToEdit: MutableState<ChatMessage?> = _messageToEdit
 
-    private val profileImageCache = mutableMapOf<String, String?>()
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private var currentUserId: String? = FirebaseAuth.getInstance().currentUser?.uid
-    fun setCurrentUserId(id: String) {
-        currentUserId = id
+    private var messagesListenerJob: Job? = null
+
+    fun startListeningMessagesByProposalId(proposalId: String) {
+        messagesListenerJob?.cancel()
+        _isLoading.value = true
+        messagesListenerJob = viewModelScope.launch {
+            chatRepository.observeMessagesByProposal(proposalId)
+                .collect { messagesList ->
+                    _messages.value = messagesList
+                    _isLoading.value = false
+                }
+        }
     }
 
     fun setMessageToEdit(message: ChatMessage?) {
         _messageToEdit.value = message
-    }
-
-    fun observeMessages(proposalId: String) {
-        chatRepository.getMessages(proposalId) { newMessages ->
-            viewModelScope.launch {
-                _messages.value = enrichMessagesWithProfileImages(newMessages)
-            }
-        }
     }
 
     suspend fun sendMessage(proposalId: String, message: ChatMessage) {
@@ -83,30 +81,14 @@ class ChatViewModel(
             chatRepository.sendMessage(proposalId, finalMsg)
         }
     }
-
-    suspend fun enrichMessagesWithProfileImages(messages: List<ChatMessage>): List<ChatMessage> {
-        return messages.map { message ->
-            val imageUrl = profileImageCache[message.senderId] ?: run {
-                val profile = userRepository.getUserProfile(message.senderId)
-                val url = profile?.profileImage
-                profileImageCache[message.senderId] = url
-                url
-            }
-            message.copy(senderProfileImage = imageUrl)
-        }
-    }
 }
 
 class ChatViewModelFactory(
-    private val application: Application,
-    private val chatRepository: ChatRepository,
-    private val userRepository: UserRepository
+    private val chatRepository: ChatRepository
 ) : ViewModelProvider.Factory {
-    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ChatViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return ChatViewModel(application, chatRepository, userRepository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        return modelClass
+            .getConstructor(ChatRepository::class.java)
+            .newInstance(chatRepository)
     }
 }

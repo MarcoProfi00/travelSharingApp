@@ -1,9 +1,8 @@
 package com.example.travelsharingapp.ui.screens.main
 
-import ChatRoomScreen
+import com.example.travelsharingapp.ui.screens.chat.ChatRoomScreen
 import android.Manifest
 import android.app.Activity
-import android.app.Application
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
@@ -402,11 +401,7 @@ fun AppContent(
     )
 
     val chatViewModel: ChatViewModel = viewModel(
-        factory = ChatViewModelFactory(
-            application = context.applicationContext as Application,
-            chatRepository = chatRepo,
-            userRepository = userProfileRepo
-        )
+        factory = ChatViewModelFactory(chatRepository = chatRepo)
     )
 
     val topBarViewModel: TopBarViewModel = viewModel()
@@ -1217,9 +1212,6 @@ fun AppContent(
                     //Chat
                     composable(AppRoutes.CHAT_LIST) {
                         if (currentUser != null) {
-                            LaunchedEffect(currentUser.uid) {
-                                chatViewModel.setCurrentUserId(currentUser.uid)
-                            }
                             ChatListScreen(
                                 modifier = Modifier.padding(innerPadding),
                                 userId = currentUser.uid,
@@ -1249,9 +1241,9 @@ fun AppContent(
                                 modifier = Modifier.padding(innerPadding),
                                 proposalId = proposalId,
                                 userId = currentUser.uid,
-                                userName = currentUser.displayName ?: "Anonymous",
                                 chatViewModel = chatViewModel,
                                 topBarViewModel = topBarViewModel,
+                                userProfileViewModel = userProfileViewModel,
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }
