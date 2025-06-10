@@ -1,6 +1,5 @@
 package com.example.travelsharingapp.ui.screens.main
 
-import com.example.travelsharingapp.ui.screens.chat.ChatRoomScreen
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
@@ -96,6 +95,7 @@ import com.example.travelsharingapp.ui.screens.authentication.AuthState
 import com.example.travelsharingapp.ui.screens.authentication.AuthViewModel
 import com.example.travelsharingapp.ui.screens.authentication.AuthViewModelFactory
 import com.example.travelsharingapp.ui.screens.chat.ChatListScreen
+import com.example.travelsharingapp.ui.screens.chat.ChatRoomScreen
 import com.example.travelsharingapp.ui.screens.chat.ChatViewModel
 import com.example.travelsharingapp.ui.screens.chat.ChatViewModelFactory
 import com.example.travelsharingapp.ui.screens.notification.NotificationScreen
@@ -137,7 +137,6 @@ import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.firebase.BuildConfig
-import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

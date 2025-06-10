@@ -3,7 +3,6 @@ package com.example.travelsharingapp.data.repository
 import android.content.Context
 import android.net.Uri
 import com.example.travelsharingapp.data.model.ChatMessage
-import com.example.travelsharingapp.data.model.TravelProposal
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
@@ -26,7 +25,7 @@ class ChatRepository(private val context: Context) {
             .collection("messages")
 
         val registration: ListenerRegistration = messagessCollection
-            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error  ->
             if (error != null) {
                 cancel("Snapshot error", error)
