@@ -623,9 +623,9 @@ fun TravelHeaderSection(
     onOrganizerClick: (userId: String) -> Unit,
 ) {
     Column (
-        modifier = Modifier
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         val banners = proposal.images.mapIndexed { index, imageUrl ->
             BannerModel(
                 imageUrl = imageUrl,
@@ -701,18 +701,16 @@ fun TravelHeaderSection(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.customColorsPalette.extraColorOrange)
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         getIconForTypology(proposal.typology.toTypologyOrNull() ?: Typology.Adventure),
-                                        contentDescription = "${proposal.typology} type",
-                                        tint = Color.White
+                                        contentDescription = "${proposal.typology} type"
                                     )
                                     if (showText) {
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text(proposal.typology, color = Color.White, fontWeight = FontWeight.Bold)
+                                        Text(proposal.typology, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }

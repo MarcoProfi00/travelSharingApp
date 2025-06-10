@@ -445,22 +445,32 @@ fun ParticipantsPreviewRow(
     modifier: Modifier = Modifier
 ) {
 
-    // Placeholder
-    if (participants.isEmpty()) {
+    val displayParticipants = participants.take(maxVisible)
+    val remainingCount = participants.size - displayParticipants.size
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        onClick = onClick
+    ) {
         Row(
             modifier = modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
                 .padding(vertical = 12.dp, horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(modifier = Modifier.height(avatarSize)) {
-                repeat(maxVisible) { index ->
+                displayParticipants.forEachIndexed { index, participant ->
                     val offsetX = (avatarSize.value * (1 - overlapFactor) * index).dp
 
                     ProfileAvatar(
                         imageSize = avatarSize,
-                        user = null,
+                        user = participant,
                         modifier = Modifier
                             .offset(x = offsetX)
                             .border(
@@ -470,69 +480,40 @@ fun ParticipantsPreviewRow(
                             )
                     )
                 }
-            }
-        }
-    }
 
-    val displayParticipants = participants.take(maxVisible)
-    val remainingCount = participants.size - displayParticipants.size
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(modifier = Modifier.height(avatarSize)) {
-            displayParticipants.forEachIndexed { index, participant ->
-                val offsetX = (avatarSize.value * (1 - overlapFactor) * index).dp
-
-                ProfileAvatar(
-                    imageSize = avatarSize,
-                    user = participant,
-                    modifier = Modifier
-                        .offset(x = offsetX)
-                        .border(
-                            width = 1.5.dp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            shape = CircleShape
+                if (remainingCount > 0) {
+                    val offsetX = (avatarSize.value * (1 - overlapFactor) * displayParticipants.size).dp
+                    Box(
+                        modifier = Modifier
+                            .offset(x = offsetX)
+                            .size(avatarSize)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .border(
+                                width = 1.5.dp,
+                                color = MaterialTheme.colorScheme.surface,
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "+$remainingCount",
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = (avatarSize.value / 2.8).sp
                         )
-                )
-            }
-
-            if (remainingCount > 0) {
-                val offsetX = (avatarSize.value * (1 - overlapFactor) * displayParticipants.size).dp
-                Box(
-                    modifier = Modifier
-                        .offset(x = offsetX)
-                        .size(avatarSize)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer)
-                        .border(
-                            width = 1.5.dp,
-                            color = MaterialTheme.colorScheme.surface,
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "+$remainingCount",
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = (avatarSize.value / 2.8).sp
-                    )
+                    }
                 }
             }
+
+            Spacer(modifier = Modifier.width(100.dp))
+
+            Text(
+                text = "Review Participants",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
-
-        Spacer(modifier = Modifier.width(100.dp))
-
-        Text(
-            text = "Review Participants",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
     }
 }

@@ -426,21 +426,26 @@ fun OwnedTravelProposalCard(
                 }
 
                 if (ownedProposal.statusEnum == ProposalStatus.Concluded) {
-                    Button(
+                    AssistChip(
                         onClick = onViewReviewsClick,
-                        modifier = Modifier.align(Alignment.End),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        label = {
+                            Text(
+                                text = "Reviews"
+                            ) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+                        ),
+                        leadingIcon = {
                             Icon(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = null,
-                                tint = Color(0xFFFFC107)
+                                tint = Color(0xFFDBA809)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Reviews")
-                        }
-                    }
+                        },
+                        border = null,
+                        modifier = Modifier.align(Alignment.End)
+                    )
                 }
             }
         }
