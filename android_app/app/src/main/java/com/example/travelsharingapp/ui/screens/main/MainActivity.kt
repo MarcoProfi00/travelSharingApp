@@ -1230,8 +1230,11 @@ fun AppContent(
                     }
 
                     composable(
-                        "${AppRoutes.CHAT_ROOM}/{proposalId}",
-                        arguments = listOf(navArgument("proposalId") { type = NavType.StringType })
+                        route = "${AppRoutes.CHAT_ROOM}/{proposalId}",
+                        arguments = listOf(navArgument("proposalId") { type = NavType.StringType }),
+                            deepLinks = listOf(navDeepLink {
+                                uriPattern = "myapp://travelsharingapp.example.com/chat/{proposalId}"
+                            })
                     ) { backStackEntry ->
                         val proposalId =
                             backStackEntry.arguments?.getString("proposalId") ?: return@composable

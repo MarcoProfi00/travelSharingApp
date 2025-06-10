@@ -132,6 +132,9 @@ class CustomFirebaseMessagingService: FirebaseMessagingService() {
             NotificationType.TRAVEL_APPLICATION_REJECTED.key -> if (proposalId != null) {
                 deepLinkUriString = "myapp://travelsharingapp.example.com/travelProposalInfo/$proposalId"
             }
+            NotificationType.NEW_CHAT_MESSAGE.key -> if (proposalId != null) {
+                deepLinkUriString = "myapp://travelsharingapp.example.com/chat/$proposalId"
+            }
             else -> {
                 Log.w(TAG, "Unknown or unhandled notificationType for deep linking: $notificationType")
             }

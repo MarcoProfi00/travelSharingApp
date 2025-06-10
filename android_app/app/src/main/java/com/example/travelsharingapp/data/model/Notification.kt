@@ -38,6 +38,11 @@ enum class NotificationType(
         "last_minute_trip",
         "Last Minute Trip",
         booleanPreferencesKey("pref_notif_type_last_minute_travel_enabled")
+    ),
+    NEW_CHAT_MESSAGE(
+        "new_chat_message",
+        "New Chat Message",
+        booleanPreferencesKey("pref_notif_type_new_chat_message_enabled")
     );
 
     companion object {

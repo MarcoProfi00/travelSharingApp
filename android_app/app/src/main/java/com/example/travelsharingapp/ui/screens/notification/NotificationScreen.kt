@@ -21,10 +21,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.RateReview
 import androidx.compose.material3.Card
@@ -307,6 +309,7 @@ fun NotificationIcon(type: String, modifier: Modifier = Modifier) {
         NotificationType.TRAVEL_APPLICATION_ACCEPTED -> Icons.Default.CheckCircle
         NotificationType.TRAVEL_APPLICATION_REJECTED -> Icons.Default.Cancel
         NotificationType.LAST_MINUTE_TRIP -> Icons.Default.LocalFireDepartment
+        NotificationType.NEW_CHAT_MESSAGE -> Icons.AutoMirrored.Filled.Message
         null -> Icons.Default.Notifications
     }
 
