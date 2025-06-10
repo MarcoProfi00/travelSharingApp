@@ -159,26 +159,26 @@ fun ApplicationManageAllScreen(
                     itemContent = { index ->
                         val application = filteredApplications[index]
                         val user by userProfileViewModel.observeUserProfileById(application.userId).collectAsState()
-                        val nonNullUser = user!!
-                        ApplicationCard(
-                            application = application,
-                            user = nonNullUser,
-                            proposal = proposal,
-                            onAccept = { app ->
-                                applicationViewModel.acceptApplication(app)
-                                refreshTrigger.intValue++
-                            },
-                            onReject = { app ->
-                                applicationViewModel.rejectApplication(app)
-                                refreshTrigger.intValue++
-                            },
-                            onCardClick = {
-                                onNavigateToUserProfileInfo(nonNullUser.userId)
-                            }
-                        )
+                        user?.let {
+                            ApplicationCard(
+                                application = application,
+                                user = user!!,
+                                proposal = proposal,
+                                onAccept = { app ->
+                                    applicationViewModel.acceptApplication(app)
+                                    refreshTrigger.intValue++
+                                },
+                                onReject = { app ->
+                                    applicationViewModel.rejectApplication(app)
+                                    refreshTrigger.intValue++
+                                },
+                                onCardClick = {
+                                    onNavigateToUserProfileInfo(user!!.userId)
+                                }
+                            )
+                        }
                     }
                 )
-
             }
         }
     }
@@ -239,8 +239,8 @@ fun ApplicationCard(
             .padding(vertical = 8.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
         onClick = onCardClick
     ) {
