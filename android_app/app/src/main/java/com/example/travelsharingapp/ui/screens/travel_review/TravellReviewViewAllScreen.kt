@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -420,7 +421,7 @@ fun ReviewCard(
     val cardBackgroundColor = if (ownReview) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
-        if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.tertiaryContainer
+        MaterialTheme.colorScheme.surfaceContainer
     }
     val cardBorder = if (ownReview) {
         BorderStroke(2.dp, MaterialTheme.colorScheme.primaryContainer)
@@ -435,7 +436,7 @@ fun ReviewCard(
         sdf.format(review.date.toDate())
     }
 
-    ElevatedCard(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .border(cardBorder, RoundedCornerShape(12.dp)),
@@ -444,7 +445,7 @@ fun ReviewCard(
             containerColor = cardBackgroundColor,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        elevation = CardDefaults.cardElevation(6.dp),
+        elevation = CardDefaults.cardElevation(4.dp),
         onClick = { onNavigateToUserProfileInfo(user.userId) }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

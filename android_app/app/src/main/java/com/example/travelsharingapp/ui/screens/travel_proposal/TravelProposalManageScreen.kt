@@ -116,6 +116,7 @@ import com.example.travelsharingapp.data.model.ItineraryStop
 import com.example.travelsharingapp.data.model.Typology
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
+import com.example.travelsharingapp.ui.theme.customColorsPalette
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -222,7 +223,6 @@ fun TravelProposalManageScreen(
         Row(
             modifier = modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
                 .imePadding(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -234,13 +234,19 @@ fun TravelProposalManageScreen(
 
             Box(modifier = Modifier.weight(0.45f)) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(end = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     item { SectionHeader("Main details") }
                     item {
-                        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 TravelNameField(proposalViewModel)
                                 DescriptionField(proposalViewModel)
@@ -251,7 +257,13 @@ fun TravelProposalManageScreen(
 
                     item { SectionHeader(title = "Travel Dates") }
                     item {
-                        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
                             Column(Modifier.padding(16.dp)) {
                                 DateRangeSelector(proposalViewModel)
                             }
@@ -260,7 +272,13 @@ fun TravelProposalManageScreen(
 
                     item { SectionHeader(title = "Budget & Group Size") }
                     item {
-                        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                                 PriceRangeSelector(proposalViewModel)
                                 ParticipantsSelector(proposalViewModel)
@@ -270,7 +288,13 @@ fun TravelProposalManageScreen(
 
                     item { SectionHeader(title = "Activities & Itinerary") }
                     item {
-                        ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 SuggestedActivitiesSelector(proposalViewModel)
                             }
@@ -287,16 +311,22 @@ fun TravelProposalManageScreen(
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
-                .padding(if (isTablet) 20.dp else 16.dp)
+                .padding(horizontal = 16.dp)
                 .imePadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(bottom = 16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
             item { SectionHeader("Main details") }
             item {
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         TravelNameField(proposalViewModel)
                         DescriptionField(proposalViewModel)
@@ -307,7 +337,13 @@ fun TravelProposalManageScreen(
 
             item { SectionHeader(title = "Travel Dates") }
             item {
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                ) {
                     Column(Modifier.padding(16.dp)) {
                         DateRangeSelector(proposalViewModel)
                     }
@@ -316,7 +352,13 @@ fun TravelProposalManageScreen(
 
             item { SectionHeader(title = "Budget & Group Size") }
             item {
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                         PriceRangeSelector(proposalViewModel)
                         ParticipantsSelector(proposalViewModel)
@@ -326,7 +368,13 @@ fun TravelProposalManageScreen(
 
             item { SectionHeader(title = "Activities & Itinerary") }
             item {
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         SuggestedActivitiesSelector(proposalViewModel)
                     }
@@ -371,14 +419,12 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = title.uppercase(),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .padding(vertical = 8.dp)
                 .align(Alignment.CenterHorizontally)
         )
-        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
 
@@ -912,14 +958,13 @@ fun ItinerarySection(
             )
         }
 
-        ElevatedCard(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = MaterialTheme.colorScheme.onSurface
             ),
             onClick = {
                 place = ""
@@ -1269,14 +1314,13 @@ fun ItineraryList(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         itineraries.forEachIndexed { index, itinerary ->
-            ElevatedCard(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
                 Column(
@@ -1285,44 +1329,60 @@ fun ItineraryList(
                         .padding(16.dp),
                     verticalArrangement = spacedBy(8.dp)
                 ) {
-                    Text(
-                        itinerary.place,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 12.dp, top = 8.dp)
-                    )
+                    Row (
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp).padding(top = 8.dp)
+                    ){
+                        Text(
+                            "${index+1}. " + itinerary.place,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        Icon (
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Free",
+                            modifier = Modifier.size(20.dp),
+                            tint = if (itinerary.isGroup) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+
+                        Icon (
+                            imageVector = Icons.Default.Group,
+                            contentDescription = "Group",
+                            modifier = Modifier.size(22.dp),
+                            tint = if (itinerary.isGroup) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+
                     Text(
                         itinerary.description,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 12.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp)
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.End
                     ) {
-                        AssistChip(
-                            onClick = { /* */ },
-                            label = { Text(if (itinerary.isGroup) "Group Activity" else "Free Time") },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = if (itinerary.isGroup) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
-                                labelColor = if (itinerary.isGroup) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
-                            ),
-                            modifier = Modifier.padding(6.dp)
-                        )
+                        IconButton(onClick = { onEdit(index, itinerary) }) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
 
-                        Row {
-                            IconButton(onClick = { onEdit(index, itinerary) }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit")
-                            }
-
-                            IconButton(onClick = { viewModel.removeItinerary(index) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete")
-                            }
+                        IconButton(onClick = { viewModel.removeItinerary(index) }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = MaterialTheme.customColorsPalette.extraColorRed)
                         }
                     }
                 }
@@ -1377,7 +1437,6 @@ fun ImagePickerSection(
             items(imageUris) { image ->
                 ElevatedCard(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFDF4FF)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                     modifier = Modifier.height(200.dp).width(200.dp),
                     onClick = { }
                 ) {
@@ -1411,7 +1470,7 @@ fun ImagePickerSection(
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.error
+                                    tint = MaterialTheme.customColorsPalette.extraColorRed
                                 )
                             }
                         }
@@ -1430,8 +1489,7 @@ fun ImagePickerSection(
             enabled = imageUris.size < 5,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.inversePrimary,
-                contentColor = MaterialTheme.colorScheme.onSurface
+                containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
             Text("Pick Images from Gallery (${imageUris.size}/5)")

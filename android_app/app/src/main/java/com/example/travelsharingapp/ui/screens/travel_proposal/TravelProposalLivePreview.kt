@@ -262,6 +262,7 @@ fun TravelProposalLivePreview(
             itineraryStops.forEachIndexed { index, stop ->
                 ItineraryStopListItemCard(
                     itineraryStop = stop,
+                    index = index,
                     onClick = {
                         cameraPositionState.position = CameraPosition.fromLatLngZoom(
                             stop.position?.let { LatLng(it.latitude, it.longitude) } ?: LatLng(0.0, 0.0),

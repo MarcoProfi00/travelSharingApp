@@ -1,7 +1,6 @@
 [versions]
 accompanistSystemuicontroller = "0.33.2-alpha"
 agp = "8.8.2"
-coil = "2.5.0"
 coilCompose = "2.5.0"
 coreSplashscreen = "1.0.1"
 credentials = "1.5.0"
@@ -51,7 +50,6 @@ androidx-navigation-compose = { module = "androidx.navigation:navigation-compose
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-window = { module = "androidx.window:window", version.ref = "window" }
 androidx-window-core = { module = "androidx.window:window-core", version.ref = "window" }
-coil = { module = "io.coil-kt:coil", version.ref = "coil" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }
 firebase-appcheck-debug = { module = "com.google.firebase:firebase-appcheck-debug" }

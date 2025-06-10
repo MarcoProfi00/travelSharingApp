@@ -19,12 +19,14 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +52,7 @@ import com.example.travelsharingapp.data.model.UserProfile
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalViewModel
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
+import com.example.travelsharingapp.ui.theme.customColorsPalette
 import java.time.LocalDate
 import java.time.Period
 
@@ -149,15 +152,11 @@ fun ApplicationAddNewScreen(
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Button(
+            OutlinedButton(
                 onClick = onBack,
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                )
             ) {
                 Text("Back")
             }
@@ -190,15 +189,12 @@ fun ApplicantInfoCard(
     motivationMessage: String,
     onMotivationChange: (String) -> Unit
 ) {
-    ElevatedCard(
+    Card (
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 6.dp
-        ),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.Top) {
@@ -320,8 +316,8 @@ fun GuestApplicantCard(
     ElevatedCard(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 6.dp
@@ -334,7 +330,7 @@ fun GuestApplicantCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Guest #${index}",
+                    "Guest n.${index+1}",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 20.sp
                 )
@@ -342,7 +338,7 @@ fun GuestApplicantCard(
                     Icon(
                         Icons.Filled.Delete,
                         contentDescription = "Remove Guest",
-                        tint = MaterialTheme.colorScheme.error
+                        tint = MaterialTheme.customColorsPalette.extraColorRed
                     )
                 }
             }

@@ -258,20 +258,7 @@ fun ProfileHeaderSection(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(28.dp))
-            .background(
-                brush = if (!isEditing) Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFF8EAF6), // lilla chiarissimo (quasi bianco)
-                        Color(0xFFD1C4E9), // lavanda
-                        Color(0xFFB39DDB)  // viola pastello pieno
-                    )
-                ) else Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.surface,
-                        MaterialTheme.colorScheme.surface
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .padding(top = 24.dp, bottom = 32.dp),
         contentAlignment = Alignment.TopCenter
     ) {
@@ -294,7 +281,7 @@ fun ProfileHeaderSection(
                 text = "$firstName $lastName",
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF512DA8)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             )
 

@@ -132,12 +132,11 @@ fun UserProfileScreen(
                 Row(
                     modifier = modifier
                         .fillMaxSize()
-                        .padding(16.dp)
                 ) {
                     Column(
                         modifier = Modifier
                             .weight(0.3f)
-                            .padding(end = 16.dp),
+                            .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         ProfileHeaderSection(
@@ -154,7 +153,7 @@ fun UserProfileScreen(
                             .weight(0.7f)
                             .imePadding()
                             .verticalScroll(rememberScrollState())
-                            .padding(start = 16.dp),
+                            .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         UserInfoSection(
@@ -223,13 +222,11 @@ fun UserInfoSection(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
-            shape = RoundedCornerShape(20.dp),
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                contentColor = MaterialTheme.colorScheme.onSurface
+            )
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 LabeledInfoCardItem(Icons.Default.Person, "Name", userProfile.firstName)
@@ -391,8 +388,8 @@ fun UserProfileInterests(
                         onClick = {},
                         label = { Text(interest) },
                         colors = SuggestionChipDefaults.suggestionChipColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            labelColor = MaterialTheme.colorScheme.onSurface
                         )
                     )
                 }
@@ -410,12 +407,10 @@ fun DestinationCard(
 ) {
     val imageId = getDestinationImage(destinationName)
 
-    ElevatedCard(
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+    Card(
         modifier = Modifier
             .height(150.dp)
-            .width(200.dp),
-        shape = RoundedCornerShape(12.dp)
+            .width(200.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Image(
@@ -545,7 +540,6 @@ fun ProfileImage(
     }
 }
 
-
 @Composable
 fun LabeledInfoCardItem(
     icon: ImageVector,
@@ -561,7 +555,7 @@ fun LabeledInfoCardItem(
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = MaterialTheme.colorScheme.onSurface,
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
@@ -600,10 +594,10 @@ fun UserReviewPreviewSection(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 ),
-                elevation = CardDefaults.cardElevation(2.dp)
+                elevation = CardDefaults.cardElevation(4.dp),
             ) {
                 Row(modifier = Modifier.padding(16.dp)) {
 
@@ -643,7 +637,7 @@ fun UserReviewPreviewSection(
         if (reviews.size > 2) {
             Text(
                 "Show all reviews",
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier
                     .padding(top = 8.dp)
                     .clickable { onViewAllClick() }

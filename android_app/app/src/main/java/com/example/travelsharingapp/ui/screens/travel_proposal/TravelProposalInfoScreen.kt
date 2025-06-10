@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PriceChange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -44,7 +46,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -91,6 +92,7 @@ import com.example.travelsharingapp.ui.screens.travel_application.ProfileAvatar
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
 import com.example.travelsharingapp.ui.screens.travel_review.TravelReviewViewModel
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
+import com.example.travelsharingapp.ui.theme.customColorsPalette
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.example.travelsharingapp.utils.toTypologyOrNull
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -294,15 +296,14 @@ fun TravelProposalInfoScreen(
 
     if (isTabletInLandscape) {
         Row(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(16.dp),
+            modifier = modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Column(
                 modifier = Modifier
                     .weight(0.45f)
-                    .fillMaxHeight(),
+                    .fillMaxSize()
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 GoogleMapCard(
@@ -314,13 +315,98 @@ fun TravelProposalInfoScreen(
                     homeCameraPosition = homeCameraPosition
                 )
             }
-            Column(
+
+            LazyColumn(
                 modifier = Modifier
                     .weight(0.55f)
-                    .fillMaxHeight()
-                    .verticalScroll(scrollState),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
+                item {
+                    TravelHeaderSection(
+                        proposal = proposal,
+                        organizer = organizer,
+                        onOrganizerClick = { userId ->
+                            onNavigateToUserProfile(userId)
+                        }
+                    )
+                }
+
+                item {
+                    if (showParticipantsReviewRow) {
+                        ParticipantsPreviewRow(
+                            participants = finalAcceptedParticipantsProfiles,
+                            onClick = onNavigateToCompanionsReview
+                        )
+                    }
+                }
+
+                item {
+                    TravelDescriptionCard(proposal)
+                }
+
+                item {
+                    Text(
+                        text = "ITINERARY STOPS",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                if (proposal.itinerary.isEmpty()) {
+                    item {
+                        Text("No stops added in the itinerary.")
+                    }
+                } else {
+                    proposal.itinerary.forEachIndexed { index, itineraryStop ->
+                        item {
+                            ItineraryStopListItemCard(
+                                itineraryStop = itineraryStop,
+                                index = index,
+                                onClick = {
+                                    cameraPositionState.position = CameraPosition.fromLatLngZoom(
+                                        itineraryStop.position?.let { LatLng(it.latitude, it.longitude) } ?: LatLng(0.0, 0.0),
+                                        15f
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    SuggestedActivitiesSection(activities = proposal.suggestedActivities)
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                item {
+                    ProposalStatusCard(
+                        proposal = proposal,
+                        isOwner = isOwner,
+                        userId = userId,
+                        applications = applications,
+                        showDeleteDialog = showDeleteDialog,
+                        showWithdrawDialog = showWithdrawDialog,
+                        onNavigateToManageApplications = onNavigateToManageApplications,
+                        onNavigateToTravelProposalApply = onNavigateToTravelProposalApply,
+                        isUserApplied = isUserApplied,
+                        isWithdrawing = isWithdrawing
+                    )
+                }
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp)
+        ) {
+            item {
                 TravelHeaderSection(
                     proposal = proposal,
                     organizer = organizer,
@@ -328,28 +414,50 @@ fun TravelProposalInfoScreen(
                         onNavigateToUserProfile(userId)
                     }
                 )
+            }
 
+            item {
                 if (showParticipantsReviewRow) {
                     ParticipantsPreviewRow(
                         participants = finalAcceptedParticipantsProfiles,
-                        onClick = onNavigateToCompanionsReview
+                        onClick = onNavigateToCompanionsReview,
                     )
                 }
+            }
 
+            item {
                 TravelDescriptionCard(proposal)
+            }
 
+            item {
+                GoogleMapCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp),
+                    proposal = proposal,
+                    cameraPositionState = cameraPositionState,
+                    homeCameraPosition = homeCameraPosition
+                )
+            }
+
+            item {
                 Text(
                     text = "ITINERARY STOPS",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp)
                 )
-                if (proposal.itinerary.isEmpty()) {
+            }
+            if (proposal.itinerary.isEmpty()) {
+                item {
                     Text("No stops added in the itinerary.")
-                } else {
-                    proposal.itinerary.forEach { itineraryStop ->
+                }
+            } else {
+                proposal.itinerary.forEachIndexed { index, itineraryStop ->
+                    item {
                         ItineraryStopListItemCard(
                             itineraryStop = itineraryStop,
+                            index = index,
                             onClick = {
                                 cameraPositionState.position = CameraPosition.fromLatLngZoom(
                                     itineraryStop.position?.let { LatLng(it.latitude, it.longitude) } ?: LatLng(0.0, 0.0),
@@ -359,10 +467,14 @@ fun TravelProposalInfoScreen(
                         )
                     }
                 }
+            }
 
+            item {
                 SuggestedActivitiesSection(activities = proposal.suggestedActivities)
-                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
+            item {
                 ProposalStatusCard(
                     proposal = proposal,
                     isOwner = isOwner,
@@ -376,78 +488,6 @@ fun TravelProposalInfoScreen(
                     isWithdrawing = isWithdrawing
                 )
             }
-        }
-    } else {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState, enabled = !cameraPositionState.isMoving)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            TravelHeaderSection(
-                proposal = proposal,
-                organizer = organizer,
-                onOrganizerClick = { userId ->
-                    onNavigateToUserProfile(userId)
-                }
-            )
-
-            if (showParticipantsReviewRow) {
-                ParticipantsPreviewRow(
-                    participants = finalAcceptedParticipantsProfiles,
-                    onClick = onNavigateToCompanionsReview,
-                )
-            }
-
-            TravelDescriptionCard(proposal)
-
-            GoogleMapCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp),
-                proposal = proposal,
-                cameraPositionState = cameraPositionState,
-                homeCameraPosition = homeCameraPosition
-            )
-
-            Text(
-                text = "ITINERARY STOPS",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 8.dp)
-            )
-            if (proposal.itinerary.isEmpty()) {
-                Text("No stops added in the itinerary.")
-            } else {
-                proposal.itinerary.forEach { itineraryStop ->
-                    ItineraryStopListItemCard(
-                        itineraryStop = itineraryStop,
-                        onClick = {
-                            cameraPositionState.position = CameraPosition.fromLatLngZoom(
-                                itineraryStop.position?.let { LatLng(it.latitude, it.longitude) } ?: LatLng(0.0, 0.0),
-                                15f
-                            )
-                        }
-                    )
-                }
-            }
-
-            SuggestedActivitiesSection(activities = proposal.suggestedActivities)
-            HorizontalDivider()
-
-            ProposalStatusCard(
-                proposal = proposal,
-                isOwner = isOwner,
-                userId = userId,
-                applications = applications,
-                showDeleteDialog = showDeleteDialog,
-                showWithdrawDialog = showWithdrawDialog,
-                onNavigateToManageApplications = onNavigateToManageApplications,
-                onNavigateToTravelProposalApply = onNavigateToTravelProposalApply,
-                isUserApplied = isUserApplied,
-                isWithdrawing = isWithdrawing
-            )
         }
     }
 
@@ -587,7 +627,10 @@ fun TravelHeaderSection(
     organizer: UserProfile?,
     onOrganizerClick: (userId: String) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column (
+        modifier = Modifier
+            .fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)) {
         val banners = proposal.images.mapIndexed { index, imageUrl ->
             BannerModel(
                 imageUrl = imageUrl,
@@ -602,104 +645,116 @@ fun TravelHeaderSection(
             contentPadding = PaddingValues(horizontal = 0.dp)
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.Top
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            )
+        ){
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                BoxWithConstraints {
-                    val showText = this.maxWidth > 100.dp
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.Top
                     ) {
-                        organizer?.let { org ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
+                        BoxWithConstraints {
+                            val showText = this.maxWidth > 100.dp
+                            organizer?.let { org ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onOrganizerClick(org.userId) }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        ProfileAvatar(
+                                            imageSize = 36.dp,
+                                            user = org,
+                                            onClick = { onOrganizerClick(org.userId) }
+                                        )
+                                        if (showText) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "${org.firstName} ${org.lastName}",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                maxLines = 1,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        BoxWithConstraints {
+                            val showText = this.maxWidth > 100.dp
+                            Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .clickable { onOrganizerClick(org.userId) }
-                                    .padding(vertical = 4.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.customColorsPalette.extraColorOrange)
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
-                                ProfileAvatar(
-                                    imageSize = 36.dp,
-                                    user = org,
-                                    onClick = { onOrganizerClick(org.userId) }
-                                )
-                                if (showText) {
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "${org.firstName} ${org.lastName}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium,
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        getIconForTypology(proposal.typology.toTypologyOrNull() ?: Typology.Adventure),
+                                        contentDescription = "${proposal.typology} type",
+                                        tint = Color.White
                                     )
+                                    if (showText) {
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(proposal.typology, color = Color.White, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.weight(1f))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.DateRange,
+                            contentDescription = "Travel dates",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                        Text("${proposal.startDate?.toDate()?.let { formatter.format(it) }} - ${proposal.endDate?.toDate()?.let { formatter.format(it) }}")
+                    }
 
-                BoxWithConstraints {
-                    val showText = this.maxWidth > 100.dp
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFFF9800))
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                getIconForTypology(proposal.typology.toTypologyOrNull() ?: Typology.Adventure),
-                                contentDescription = "${proposal.typology} type",
-                                tint = Color.White
-                            )
-                            if (showText) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(proposal.typology, color = Color.White, fontWeight = FontWeight.Bold)
-                            }
-                        }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Group,
+                            contentDescription = "Participants",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("${proposal.participantsCount} / ${proposal.maxParticipants} participants")
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.PriceChange,
+                            contentDescription = "Price range",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("€${proposal.minPrice} - €${proposal.maxPrice}")
                     }
                 }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.DateRange,
-                    contentDescription = "Travel dates",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                Text("${proposal.startDate?.toDate()?.let { formatter.format(it) }} - ${proposal.endDate?.toDate()?.let { formatter.format(it) }}")
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Filled.Group,
-                    contentDescription = "Participants",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("${proposal.participantsCount} / ${proposal.maxParticipants} participants")
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.PriceChange,
-                    contentDescription = "Price range",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("€${proposal.minPrice} - €${proposal.maxPrice}")
             }
         }
     }
@@ -707,14 +762,11 @@ fun TravelHeaderSection(
 
 @Composable
 fun TravelDescriptionCard(proposal: TravelProposal) {
-    ElevatedCard(
+    Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 6.dp
-        ),
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        )
     ) {
         Row(
             modifier = Modifier
@@ -722,7 +774,7 @@ fun TravelDescriptionCard(proposal: TravelProposal) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+            Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
             Spacer(modifier = Modifier.width(8.dp))
             Text(proposal.description)
         }
@@ -742,7 +794,7 @@ fun GoogleMapCard(
         Card(
             modifier = modifier
                 .fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(16.dp)
         ) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
@@ -811,15 +863,16 @@ fun GoogleMapCard(
 @Composable
 fun ItineraryStopListItemCard(
     itineraryStop: ItineraryStop,
+    index: Int,
     onClick: () -> Unit
 ) {
-    ElevatedCard(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
         onClick = onClick
     ) {
@@ -829,30 +882,39 @@ fun ItineraryStopListItemCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                itineraryStop.place,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 12.dp, top = 8.dp)
-            )
+            Row (
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(horizontal = 8.dp).padding(vertical = 8.dp)
+            ){
+                Text(
+                    "${index+1}. " + itineraryStop.place,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Icon (
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Free",
+                    modifier = Modifier.size(20.dp),
+                    tint = if (itineraryStop.isGroup) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onPrimaryContainer
+                )
+
+                Icon (
+                    imageVector = Icons.Default.Group,
+                    contentDescription = "Group",
+                    modifier = Modifier.size(22.dp),
+                    tint = if (itineraryStop.isGroup) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            }
 
             Text(
                 itineraryStop.description,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 12.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-
-            AssistChip(
-                onClick = { /* */ },
-                label = { Text(if (itineraryStop.isGroup) "Group Activity" else "Free Time") },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = if (itineraryStop.isGroup) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
-                    labelColor = if (itineraryStop.isGroup) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer
-                ),
-                modifier = Modifier.padding(6.dp)
+                modifier = Modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp)
             )
         }
     }
@@ -883,8 +945,8 @@ fun SuggestedActivitiesSection(activities: List<String>) {
                         onClick = {},
                         label = { Text(activities[index]) },
                         colors = AssistChipDefaults.assistChipColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            labelColor = MaterialTheme.colorScheme.onSurface
                         )
                     )
                 }
@@ -914,7 +976,9 @@ fun ProposalStatusCard(
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
@@ -930,16 +994,22 @@ fun ProposalStatusCard(
         if (isOwner) {
             Button(
                 onClick = onNavigateToManageApplications,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
             ) {
-                Text("Manage Applications")
+                Text(
+                    text = "Manage Applications",
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
             Button(
                 onClick = { showDeleteDialog.value = true },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Delete Proposal", color = MaterialTheme.colorScheme.error)
+                Text("Delete Proposal", color = MaterialTheme.colorScheme.onErrorContainer)
             }
         } else {
             if (!isUserApplied) {
@@ -962,19 +1032,27 @@ fun ProposalStatusCard(
                 } else {
                     Button(
                         onClick = onNavigateToTravelProposalApply,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
                     ) {
-                        Text("Join the trip")
+                        Text(
+                            text = "Join the trip"
+                        )
                     }
                 }
 
             } else {
                 val application = applications.find { it.userId == userId }
                 if (application != null) {
-                    ElevatedCard(
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        ),
                         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                     ) {
                         Column(modifier = Modifier
@@ -985,9 +1063,9 @@ fun ProposalStatusCard(
                                 Text(
                                     text = application.statusEnum?.toString() ?: "Unknown",
                                     color = when (application.status) {
-                                        ApplicationStatus.Accepted.toString() ->  Color(0xFF4CAF50)
-                                        ApplicationStatus.Pending.toString() -> Color(0xFFFF9800)
-                                        ApplicationStatus.Rejected.toString() -> Color(0xFFF44336)
+                                        ApplicationStatus.Accepted.toString() -> MaterialTheme.customColorsPalette.extraColorGreen
+                                        ApplicationStatus.Pending.toString() -> MaterialTheme.customColorsPalette.extraColorOrange
+                                        ApplicationStatus.Rejected.toString() -> MaterialTheme.customColorsPalette.extraColorRed
                                         else -> Color.Gray
                                     },
                                     style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold
@@ -997,7 +1075,10 @@ fun ProposalStatusCard(
                             if (application.statusEnum == ApplicationStatus.Accepted || application.statusEnum == ApplicationStatus.Pending) {
                                 Button(
                                     onClick = { showWithdrawDialog.value = true },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer, contentColor = MaterialTheme.colorScheme.onTertiaryContainer),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                    ),
                                     modifier = Modifier.align(Alignment.End)
                                 ) {
                                     Text("Withdraw Application")

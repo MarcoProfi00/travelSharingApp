@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -141,11 +142,10 @@ fun TravelProposalOwnedListScreen(
                 columns = GridCells.Fixed(numColumns),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 12.dp),
+                contentPadding = PaddingValues(bottom = 16.dp),
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
-
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Column(modifier = Modifier.fillMaxSize()) {
@@ -267,15 +267,13 @@ fun OwnedTravelProposalCard(
         else -> Color.Gray
     }
 
-    val cardHeight = if (ownedProposal.pendingApplicationsCount > 0) 180.dp else 160.dp
-
-    ElevatedCard(
-        modifier = modifier.height(cardHeight),
+    Card(
+        modifier = modifier.height(180.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.cardElevation(4.dp),
         onClick = onClick
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {

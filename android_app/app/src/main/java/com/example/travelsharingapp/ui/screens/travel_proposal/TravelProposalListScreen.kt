@@ -63,6 +63,7 @@ import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePickerDialog
@@ -137,6 +138,7 @@ import com.example.travelsharingapp.data.model.Typology
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
+import com.example.travelsharingapp.ui.theme.customColorsPalette
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.example.travelsharingapp.utils.toTypologyOrNull
 import kotlinx.coroutines.launch
@@ -328,7 +330,6 @@ fun TravelProposalListScreen(
             Box(
                 modifier = modifier
                     .fillMaxSize()
-                    .padding(16.dp)
             ) {
                 Column (
                     modifier = Modifier
@@ -1021,8 +1022,7 @@ fun TravelProposalLazyList(
             verticalArrangement = Arrangement.spacedBy(verticalSpacing),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 12.dp),
-            modifier = modifier
-                .fillMaxSize()
+            modifier = modifier.fillMaxSize()
         ) {
             items(
                 count = travelProposalList.size,
@@ -1075,7 +1075,7 @@ fun FavoriteButton(
                 Icon(
                     imageVector = Icons.Filled.Favorite,
                     contentDescription = null,
-                    tint = Color(0xFFDB0707),
+                    tint = MaterialTheme.customColorsPalette.favoriteButtonColor,
                     modifier = modifier.graphicsLayer {
                         scaleX = 1.8f
                         scaleY = 1.8f
@@ -1129,14 +1129,12 @@ fun TravelProposalCard(
     onCardClick: () -> Unit,
     onEditClick: () -> Unit
 ) {
-    ElevatedCard (
+    Card (
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 6.dp
-        ),
+        elevation = CardDefaults.cardElevation(4.dp),
         modifier = modifier.height(310.dp),
         onClick = {
             onCardClick()
@@ -1214,16 +1212,16 @@ fun TravelProposalCard(
                         modifier = Modifier
                             .padding(8.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(MaterialTheme.colorScheme.surface)
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                             .align(Alignment.TopStart)
                     ) {
                         Text(
                             applicationStatus.name,
                             color = when (applicationStatus) {
-                                ApplicationStatus.Accepted -> Color(0xFF4CAF50)
-                                ApplicationStatus.Pending -> Color(0xFFFF9800)
-                                ApplicationStatus.Rejected -> Color(0xFFF44336)
+                                ApplicationStatus.Accepted -> MaterialTheme.customColorsPalette.extraColorGreen
+                                ApplicationStatus.Pending -> MaterialTheme.customColorsPalette.extraColorOrange
+                                ApplicationStatus.Rejected -> MaterialTheme.customColorsPalette.extraColorRed
                             },
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold

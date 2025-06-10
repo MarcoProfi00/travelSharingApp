@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Upcoming
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -197,11 +198,10 @@ fun TravelProposalJoinedScreen(
                     columns = GridCells.Fixed(numColumns),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 12.dp),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp)
-
+                        .padding(horizontal = 16.dp)
                 ) {
                     items(
                         count = proposalsToDisplay.size,
@@ -236,13 +236,13 @@ fun JoinedTravelProposalCard(
         isContextUpcoming = isUpcoming
     )
 
-    ElevatedCard(
+    Card(
         modifier = modifier.fillMaxWidth().height(160.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.cardElevation(4.dp),
         onClick = onClick
     ) {
         Row(modifier = Modifier.fillMaxWidth()) {

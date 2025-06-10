@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.RateReview
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -105,7 +107,10 @@ fun NotificationScreen(
     } else {
         LazyColumn(
             modifier = modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp),
         ) {
             items(
                 count = notifications.size,
@@ -206,7 +211,6 @@ fun SwipeToDismissContainer(
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .background(MaterialTheme.colorScheme.error),
                         verticalAlignment = Alignment.CenterVertically,
@@ -233,30 +237,26 @@ fun NotificationItem(
     onCardClick: () -> Unit
 ) {
     val titleColor = MaterialTheme.colorScheme.primary
-    val messageColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val messageColor = MaterialTheme.colorScheme.onSurface
     val dateColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
 
     val cardContainerColor = if (notification.read) {
-        MaterialTheme.colorScheme.surfaceVariant
+        MaterialTheme.colorScheme.surfaceContainerLow
     } else {
-        MaterialTheme.colorScheme.primaryContainer
+        MaterialTheme.colorScheme.surfaceContainerHigh
     }
     val contentEmphasisAlpha = if (notification.read) 0.7f else 1.0f
 
-    ElevatedCard (
+    Card (
         colors = CardDefaults.cardColors(
             containerColor = cardContainerColor,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = contentEmphasisAlpha)
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (notification.read) 2.dp else 6.dp
-        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
+            .fillMaxWidth(),
         onClick = { onCardClick() }
     ){
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
