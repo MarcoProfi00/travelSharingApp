@@ -109,7 +109,7 @@ fun ApplicationManageAllScreen(
     val currentApplications = applicationsForProposal
 
     val filteredApplications = currentApplications.filter { application ->
-        statusFilter.isEmpty() || statusFilter.contains(application.status)
+        statusFilter.contains(application.status)
     }
 
     LaunchedEffect(Unit) {

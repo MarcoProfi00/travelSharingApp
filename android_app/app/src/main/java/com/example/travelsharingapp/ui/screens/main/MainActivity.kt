@@ -194,6 +194,7 @@ object AppRoutes {
     fun travelProposalApply(proposalId: String) = "travelProposalApply/$proposalId"
     fun reviewViewAllScreen(proposalId: String) = "reviewViewAll/$proposalId"
     fun travelProposalUserReviews(proposalId: String) = "travelProposalUserReviews/$proposalId"
+    fun chatRoom(chatId: String) = "chat_room/$chatId"
 }
 
 val LocalWindowSizeClass = staticCompositionLocalOf<WindowSizeClass> {
@@ -401,7 +402,7 @@ fun AppContent(
     )
 
     val chatViewModel: ChatViewModel = viewModel(
-        factory = ChatViewModelFactory(chatRepository = chatRepo)
+        factory = ChatViewModelFactory(chatRepo)
     )
 
     val topBarViewModel: TopBarViewModel = viewModel()
@@ -1027,6 +1028,7 @@ fun AppContent(
                                 userId = currentUser.uid,
                                 viewModel = travelProposalViewModel,
                                 topBarViewModel = topBarViewModel,
+                                chatViewModel = chatViewModel,
                                 navController = navController
                             )
                         }

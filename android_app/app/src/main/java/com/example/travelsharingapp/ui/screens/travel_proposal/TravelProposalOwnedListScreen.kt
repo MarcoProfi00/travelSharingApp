@@ -59,6 +59,7 @@ import coil.compose.AsyncImage
 import com.example.travelsharingapp.R
 import com.example.travelsharingapp.data.model.ProposalStatus
 import com.example.travelsharingapp.data.model.TravelProposal
+import com.example.travelsharingapp.ui.screens.chat.ChatViewModel
 import com.example.travelsharingapp.ui.screens.main.AppRoutes
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
@@ -72,9 +73,11 @@ fun TravelProposalOwnedListScreen(
     modifier: Modifier,
     viewModel: TravelProposalViewModel,
     topBarViewModel: TopBarViewModel,
+    chatViewModel: ChatViewModel,
     userId: String,
     navController: NavController
 ) {
+    val unreadCounts by chatViewModel.unreadMessagesCount.collectAsState()
     val configuration = LocalConfiguration.current
     val isTablet = shouldUseTabletLayout()
 
@@ -109,6 +112,11 @@ fun TravelProposalOwnedListScreen(
                 }
             }
         )
+    }
+
+    LaunchedEffect(ownedProposals) {
+        val allChatIds = ownedProposals.map { it.proposalId }
+        chatViewModel.listenForUnreadCounts(allChatIds, userId)
     }
 
     Column(
@@ -167,10 +175,12 @@ fun TravelProposalOwnedListScreen(
                     contentType = { "OwnedTravelProposalCard" },
                     itemContent = { index ->
                         val ownedProposal = openProposals[index]
+                        val count = unreadCounts[ownedProposal.proposalId] ?: 0
                         OwnedTravelProposalCard(
                             ownedProposal = ownedProposal,
                             isOwner = true,
                             modifier = Modifier.fillMaxWidth(),
+                            unreadCount = count,
                             onClick = {
                                 navController.navigate(AppRoutes.travelProposalInfo(ownedProposal.proposalId))
                             },
@@ -179,13 +189,18 @@ fun TravelProposalOwnedListScreen(
                             },
                             onViewReviewsClick = {
                                 navController.navigate(AppRoutes.reviewViewAllScreen(ownedProposal.proposalId))
+                            },
+                            onNavigateToChatRoom = {
+                                navController.navigate(AppRoutes.chatRoom(ownedProposal.proposalId))
                             }
                         )
                     }
                 )
 
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Column(modifier = Modifier.fillMaxSize().padding(top = 12.dp)) {
+                    Column(modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 12.dp)) {
                         Text(
                             text = "Concluded",
                             style = MaterialTheme.typography.titleSmall,
@@ -228,10 +243,12 @@ fun TravelProposalOwnedListScreen(
                     contentType = { "OwnedTravelProposalCard" },
                     itemContent = { index ->
                         val ownedProposal = concludedProposals[index]
+                        val count = unreadCounts[ownedProposal.proposalId] ?: 0
                         OwnedTravelProposalCard(
                             ownedProposal = ownedProposal,
                             isOwner = true,
                             modifier = Modifier.fillMaxWidth(),
+                            unreadCount = count,
                             onClick = {
                                 navController.navigate(AppRoutes.travelProposalInfo(ownedProposal.proposalId))
                             },
@@ -240,6 +257,9 @@ fun TravelProposalOwnedListScreen(
                             },
                             onViewReviewsClick = {
                                 navController.navigate(AppRoutes.reviewViewAllScreen(ownedProposal.proposalId))
+                            },
+                            onNavigateToChatRoom = {
+                                navController.navigate(AppRoutes.chatRoom(ownedProposal.proposalId))
                             }
                         )
                     }
@@ -254,9 +274,11 @@ fun OwnedTravelProposalCard(
     ownedProposal: TravelProposal,
     isOwner: Boolean,
     modifier: Modifier = Modifier,
+    unreadCount: Int,
     onClick: () -> Unit,
     onPendingApplicationsClick: () -> Unit,
-    onViewReviewsClick: () -> Unit
+    onViewReviewsClick: () -> Unit,
+    onNavigateToChatRoom: () -> Unit
 ) {
     val statusColor = when (ownedProposal.statusEnum) {
         ProposalStatus.Published -> Color(0xFF2E7D32)
@@ -374,7 +396,7 @@ fun OwnedTravelProposalCard(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     if (isOwner) {
                         if (ownedProposal.pendingApplicationsCount > 0) {
@@ -398,12 +420,12 @@ fun OwnedTravelProposalCard(
                             )
                         }
 
-                        if (ownedProposal.messages.isNotEmpty()) {
+                        if (unreadCount > 0) {
                             AssistChip(
-                                onClick = { },
+                                onClick = onNavigateToChatRoom,
                                 label = {
                                     Text(
-                                        text = "${ownedProposal.messages.size} messages",
+                                        text = "$unreadCount message" + (if (unreadCount > 1) "s" else ""),
                                         style = MaterialTheme.typography.labelSmall,
                                         maxLines = 1
                                     )
@@ -459,7 +481,9 @@ fun StatusFilterChips(
     val allStatuses = ProposalStatus.entries.map { it.name }
 
     LazyRow(
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(horizontal = 16.dp)
     ) {

@@ -138,6 +138,13 @@ fun ChatRoomScreen(
         return
     }
 
+    LaunchedEffect(messages) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(0)
+            chatViewModel.markMessagesAsRead(proposalId, userId)
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()

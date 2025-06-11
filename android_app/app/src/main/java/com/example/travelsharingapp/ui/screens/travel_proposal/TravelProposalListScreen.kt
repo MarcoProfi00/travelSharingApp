@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Hiking
 import androidx.compose.material.icons.filled.HistoryToggleOff
 import androidx.compose.material.icons.filled.Hotel
@@ -392,6 +393,7 @@ fun TravelProposalListScreen(
                                 experienceTypologyFilter.remove(filter.name)
                             }
                             applyMainFilters = experienceTypologyFilter.isNotEmpty()
+                            filterTrigger++
                         }
                     )
                 }
@@ -438,9 +440,25 @@ fun TravelProposalListScreen(
                         .padding(horizontal = 16.dp)
                         .padding(top = searchBarHeight)
                 ) {
+                    TravelProposalListFilters(
+                        selectedFilters = experienceTypologyFilter
+                            .mapNotNull { it.toTypologyOrNull() }
+                            .toMutableStateList(),
+                        onFilterToggle = { filter, isSelected ->
+                            if (isSelected) {
+                                experienceTypologyFilter.add(filter.name)
+                            } else {
+                                experienceTypologyFilter.remove(filter.name)
+                            }
+                            applyMainFilters = experienceTypologyFilter.isNotEmpty()
+                            filterTrigger++
+                        }
+                    )
+
                     Row (
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         AssistChip(
                             onClick = { showAdvancedFiltersSheet = true },
@@ -471,20 +489,6 @@ fun TravelProposalListScreen(
                                 tint = if (showOnlyFavorites) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-
-                        TravelProposalListFilters(
-                            selectedFilters = experienceTypologyFilter
-                                .mapNotNull { it.toTypologyOrNull() }
-                                .toMutableStateList(),
-                            onFilterToggle = { filter, isSelected ->
-                                if (isSelected) {
-                                    experienceTypologyFilter.add(filter.name)
-                                } else {
-                                    experienceTypologyFilter.remove(filter.name)
-                                }
-                                applyMainFilters = experienceTypologyFilter.isNotEmpty()
-                            }
-                        )
                     }
 
                     TravelProposalLazyList(
@@ -974,8 +978,7 @@ fun TravelProposalListFilters(
 
     LazyRow (
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 14.dp),
+            .fillMaxWidth(),
         horizontalArrangement =  Arrangement.spacedBy(8.dp),
     ) {
         items(
@@ -1401,8 +1404,7 @@ fun SearchBarSuggestions(
                 expanded = expanded,
                 onExpandedChange = { onExpandedChange(it) },
                 shadowElevation = 4.dp,
-                tonalElevation = 4.dp,
-                //windowInsets = WindowInsets(0.dp),
+                tonalElevation = 4.dp
             ) {
                 // Display search results in a scrollable column
                 Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -1441,7 +1443,7 @@ fun getIconForTypology(typology: Typology): ImageVector {
 fun getIconForTravelStatus(status: ProposalStatus): ImageVector {
     return when (status) {
         ProposalStatus.Published -> Icons.Default.NewLabel
-        ProposalStatus.Full -> Icons.Default.Close
+        ProposalStatus.Full -> Icons.Default.Groups
         ProposalStatus.Concluded -> Icons.Default.HistoryToggleOff
     }
 }
