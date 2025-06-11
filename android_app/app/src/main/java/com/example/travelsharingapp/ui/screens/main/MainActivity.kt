@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -136,7 +135,6 @@ import com.example.travelsharingapp.utils.LockScreenOrientation
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.net.PlacesClient
-import com.google.firebase.BuildConfig
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -257,10 +255,6 @@ class MainActivity : ComponentActivity() {
         }
 
         val placesClient = Places.createClient(this)
-
-        if (BuildConfig.DEBUG) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
 
         enableEdgeToEdge()
         setContent {

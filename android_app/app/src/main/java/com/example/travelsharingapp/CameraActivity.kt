@@ -3,6 +3,7 @@ package com.example.travelsharingapp
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -80,6 +81,8 @@ import com.example.travelsharingapp.ui.screens.main.LocalWindowSizeClass
 import com.example.travelsharingapp.ui.screens.settings.ThemeViewModel
 import com.example.travelsharingapp.ui.screens.settings.ThemeViewModelFactory
 import com.example.travelsharingapp.ui.theme.TravelProposalTheme
+import com.example.travelsharingapp.utils.LockScreenOrientation
+import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -133,6 +136,9 @@ fun CameraScreen(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    if(!shouldUseTabletLayout())
+        LockScreenOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
 
     var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
     var flashMode by remember { mutableIntStateOf(FLASH_MODE_OFF) }

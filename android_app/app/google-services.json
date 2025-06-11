@@ -14,11 +14,51 @@
       },
       "oauth_client": [
         {
-          "client_id": "52459642476-v54s9at8u0nhjaerda54651be2bhdt8n.apps.googleusercontent.com",
+          "client_id": "52459642476-5o4v79cgr0ekdbdu2af5da4vts5resmq.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.ToTravel",
-            "certificate_hash": "c45976e2fefd663187b1fb77c04eabc4c38303d9"
+            "certificate_hash": "5cc4db73da13f9651d23417336edb872da45071c"
+          }
+        },
+        {
+          "client_id": "52459642476-ahue9a7uaqq5591hm5q8g00psfsdrudk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ToTravel",
+            "certificate_hash": "55b76c6ffeb01be3048784beae6a672cb9424d4f"
+          }
+        },
+        {
+          "client_id": "52459642476-apdlo8kcqs8u6j93612d2k5jmu1uqb79.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ToTravel",
+            "certificate_hash": "dfceeacc9c46aff347ebfb3167fa3811ed925f6b"
+          }
+        },
+        {
+          "client_id": "52459642476-e4k2g3htaf02bbig1d5u4gcc9l184mml.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ToTravel",
+            "certificate_hash": "94ac67c60f4972a1f238216bf4ae84d26f0fc863"
+          }
+        },
+        {
+          "client_id": "52459642476-gq8hpjovmvdpv9hvjpn1r4tqgr55g6an.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ToTravel",
+            "certificate_hash": "4631de1a10b80a58ec23cbb32410904bd1cc688f"
+          }
+        },
+        {
+          "client_id": "52459642476-ufss2mplagpn8ucl7snlfvpjbnlkkis8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ToTravel",
+            "certificate_hash": "2fd24859d3b997dfdec95184a7a89fbe8e2bc455"
           }
         },
         {
