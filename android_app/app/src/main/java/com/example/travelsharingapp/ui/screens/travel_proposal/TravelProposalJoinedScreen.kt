@@ -1,6 +1,7 @@
 package com.example.travelsharingapp.ui.screens.travel_proposal
 
 import android.content.res.Configuration
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubbleOutline
@@ -46,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -56,9 +59,11 @@ import coil.compose.AsyncImage
 import com.example.travelsharingapp.R
 import com.example.travelsharingapp.data.model.ApplicationStatus
 import com.example.travelsharingapp.data.model.ProposalStatus
+import com.example.travelsharingapp.data.model.TravelApplication
 import com.example.travelsharingapp.data.model.TravelProposal
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicationViewModel
+import com.example.travelsharingapp.ui.theme.customColorsPalette
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
@@ -206,6 +211,7 @@ fun TravelProposalJoinedScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 proposal = travelProposal,
                                 isUpcoming = isUpcomingList,
+                                applications = validApplications,
                                 onClick = { onNavigateToProposalInfo(travelProposal.proposalId) },
                                 onReviewClick = { onNavigateToReviewPage(travelProposal.proposalId) }
                             )
@@ -222,6 +228,7 @@ fun JoinedTravelProposalCard(
     modifier: Modifier,
     proposal: TravelProposal,
     isUpcoming: Boolean,
+    applications: List<TravelApplication>,
     onClick: () -> Unit,
     onReviewClick: () -> Unit
 ) {
@@ -231,7 +238,7 @@ fun JoinedTravelProposalCard(
     )
 
     Card(
-        modifier = modifier.fillMaxWidth().height(160.dp),
+        modifier = modifier.fillMaxWidth().height(180.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -271,6 +278,31 @@ fun JoinedTravelProposalCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
+                }
+
+                val application = applications.find { it.proposalId == proposal.proposalId }
+                val applicationStatus = application?.statusEnum
+
+                if (applicationStatus != null) {
+                    Box(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .align(Alignment.TopStart)
+                    ) {
+                        Text(
+                            applicationStatus.name,
+                            color = when (applicationStatus) {
+                                ApplicationStatus.Accepted -> MaterialTheme.customColorsPalette.extraColorGreen
+                                ApplicationStatus.Pending -> MaterialTheme.customColorsPalette.extraColorOrange
+                                ApplicationStatus.Rejected -> MaterialTheme.customColorsPalette.extraColorRed
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 

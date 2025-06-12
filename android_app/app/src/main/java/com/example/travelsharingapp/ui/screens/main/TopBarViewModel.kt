@@ -19,6 +19,9 @@ class TopBarViewModel : ViewModel() {
     private val _config = MutableStateFlow(TopBarConfig())
     val config: StateFlow<TopBarConfig> = _config.asStateFlow()
 
+    private val _onNavigateAway = MutableStateFlow<((() -> Unit) -> Unit)?>(null)
+    val onNavigateAway: StateFlow<((() -> Unit) -> Unit)?> = _onNavigateAway.asStateFlow()
+
     fun setConfig(
         title: String,
         navigationIcon: (@Composable () -> Unit)? = null,
@@ -29,12 +32,7 @@ class TopBarViewModel : ViewModel() {
         _config.value = TopBarConfig(title, navigationIcon, actions, floatingActionButton, isVisible)
     }
 
-    fun setTitle(title: String) {
-        _config.value = _config.value.copy(title = title)
+    fun setNavigateAwayAction(action: ((() -> Unit) -> Unit)?) {
+        _onNavigateAway.value = action
     }
-
-    fun setVisible(isVisible: Boolean) {
-        _config.value = _config.value.copy(isVisible = isVisible)
-    }
-
 }

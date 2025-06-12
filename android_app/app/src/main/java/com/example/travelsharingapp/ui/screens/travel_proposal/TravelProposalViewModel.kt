@@ -125,6 +125,9 @@ class TravelProposalViewModel(
     private val _applicationIds = MutableStateFlow<List<String>>(emptyList())
     val applicationIds: StateFlow<List<String>> = _applicationIds
 
+    private val _hasUnsavedChanges = MutableStateFlow(false)
+    val hasUnsavedChanges: StateFlow<Boolean> = _hasUnsavedChanges.asStateFlow()
+
     private val _creationSuccess = MutableStateFlow(false)
     //val creationSuccess: StateFlow<Boolean> = _creationSuccess
 
@@ -134,24 +137,49 @@ class TravelProposalViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    fun onNameChange(newName: String) { _name.value = newName }
-    fun onDescriptionChange(newDescription: String) {
-        if (newDescription.length <= 5000) _description.value = newDescription
+    fun onNameChange(newName: String) {
+        _name.value = newName
+        _hasUnsavedChanges.value = true
     }
-    fun onTypologyChange(newTypology: String) { _typology.value = newTypology }
+
+    fun onDescriptionChange(newDescription: String) {
+        if (newDescription.length <= 5000) {
+            _description.value = newDescription
+            _hasUnsavedChanges.value = true
+        }
+    }
+
+    fun onTypologyChange(newTypology: String) {
+        _typology.value = newTypology
+        _hasUnsavedChanges.value = true
+    }
+
     fun onDatesChange(newStart: LocalDate?, newEnd: LocalDate?) {
         _startDate.value = newStart
         _endDate.value = newEnd
+        _hasUnsavedChanges.value = true
     }
+
     fun onMinPriceChange(newMinPrice: Float) {
         _minPrice.value = newMinPrice
-        if (newMinPrice > _maxPrice.value) _maxPrice.value = newMinPrice
+        if (newMinPrice > _maxPrice.value) {
+            _maxPrice.value = newMinPrice
+            _hasUnsavedChanges.value = true
+        }
     }
+
     fun onMaxPriceChange(newMaxPrice: Float) {
         _maxPrice.value = newMaxPrice
-        if (newMaxPrice < _minPrice.value) _minPrice.value = newMaxPrice
+        if (newMaxPrice < _minPrice.value) {
+            _minPrice.value = newMaxPrice
+            _hasUnsavedChanges.value = true
+        }
     }
-    fun onMaxParticipantsChange(count: String) { _maxParticipantsAllowed.value = count }
+
+    fun onMaxParticipantsChange(count: String) {
+        _maxParticipantsAllowed.value = count
+        _hasUnsavedChanges.value = true
+    }
 
     init {
         _name.debounce(300L).onEach { performNameValidation(it) }.launchIn(viewModelScope)
@@ -310,15 +338,18 @@ class TravelProposalViewModel(
     fun addSuggestedActivity(activity: String) {
         if (activity.isNotBlank()) {
             _suggestedActivities.value = _suggestedActivities.value + activity
+            _hasUnsavedChanges.value = true
         }
     }
 
     fun removeSuggestedActivity(activity: String) {
         _suggestedActivities.value = _suggestedActivities.value - activity
+        _hasUnsavedChanges.value = true
     }
 
     fun addItinerary(newItem: ItineraryStop) {
         _itinerary.value = _itinerary.value + newItem
+        _hasUnsavedChanges.value = true
     }
 
     fun updateItinerary(index: Int, updatedItem: ItineraryStop) {
@@ -326,6 +357,7 @@ class TravelProposalViewModel(
         if (index in currentList.indices) {
             currentList[index] = updatedItem
             _itinerary.value = currentList
+            _hasUnsavedChanges.value = true
         }
     }
 
@@ -334,17 +366,20 @@ class TravelProposalViewModel(
             _itinerary.value = _itinerary.value.toMutableList().apply {
                 removeAt(index)
             }
+            _hasUnsavedChanges.value = true
         }
     }
 
     fun addImageUri(uri: String) {
         if (_imageUris.value.size < 5) {
             _imageUris.value = _imageUris.value + TravelImage.UriImage(uri)
+            _hasUnsavedChanges.value = true
         }
     }
 
     fun removeImageUri(image: TravelImage) {
         _imageUris.value = _imageUris.value - image
+        _hasUnsavedChanges.value = true
 
         if (image is TravelImage.UriImage) {
             val url = image.uri
@@ -399,6 +434,7 @@ class TravelProposalViewModel(
             try {
                 repository.addProposal(proposal, urisToUpload)
                 _creationSuccess.value = true
+                _hasUnsavedChanges.value = false
             } catch (e: Exception) {
                 Log.e("SaveProposal", "Error saving proposal", e)
             } finally {
@@ -453,6 +489,7 @@ class TravelProposalViewModel(
 
             try {
                 repository.updateProposal(updated, urisToUpload)
+                _hasUnsavedChanges.value = false
             } catch (e: Exception) {
                 Log.e("UpdateProposal", "Error updating proposal $proposalId", e)
             } finally {
@@ -509,6 +546,7 @@ class TravelProposalViewModel(
                     pendingApplicationsCount.value = proposal.pendingApplicationsCount
                     participantsCount.value = proposal.participantsCount
                     status.value = proposal.status
+                    _hasUnsavedChanges.value = false
                     resetErrors()
                 }
             } catch (e: Exception) {
@@ -548,6 +586,7 @@ class TravelProposalViewModel(
                     participantsCount.value = 0
                     status.value = "Published"
                     _creationSuccess.value = false
+                    _hasUnsavedChanges.value = false
                     resetErrors()
                 }
             } catch (e: Exception) {
@@ -595,6 +634,23 @@ class TravelProposalViewModel(
         _itinerary.value = emptyList()
         _imageUris.value = emptyList()
         _organizerId.value = organizerId
+        _hasUnsavedChanges.value = false
+        resetErrors()
+    }
+
+    fun resetUnsavedChangesFlag() {
+        _name.value = ""
+        _startDate.value = null
+        _endDate.value = null
+        _minPrice.value = 0f
+        _maxPrice.value = 1000f
+        _maxParticipantsAllowed.value = "1"
+        _typology.value = ""
+        _description.value = ""
+        _suggestedActivities.value = emptyList()
+        _itinerary.value = emptyList()
+        _imageUris.value = emptyList()
+        _hasUnsavedChanges.value = false
         resetErrors()
     }
 

@@ -454,6 +454,8 @@ fun AppContent(
         key(currentUser?.uid) {
             val navController = rememberNavController()
             var currentTab by rememberSaveable { mutableStateOf(BottomTab.Explore) }
+            val navigateAwayAction by topBarViewModel.onNavigateAway.collectAsState()
+
             val backStackEntry by navController.currentBackStackEntryAsState()
             LaunchedEffect(backStackEntry) {
                 val route = backStackEntry?.destination?.route
@@ -621,7 +623,8 @@ fun AppContent(
                             selectedTab = currentTab,
                             onTabSelected = { currentTab = it },
                             navController = navController,
-                            currentUserId = currentUser.uid
+                            currentUserId = currentUser.uid,
+                            navigateAwayAction = navigateAwayAction
                         )
                     }
                 },
@@ -1272,7 +1275,8 @@ fun BottomNavigationBar(
     selectedTab: BottomTab,
     onTabSelected: (BottomTab) -> Unit,
     navController: NavHostController,
-    currentUserId: String
+    currentUserId: String,
+    navigateAwayAction: ((() -> Unit) -> Unit)?
 ) {
     NavigationBar(
         windowInsets = NavigationBarDefaults.windowInsets
@@ -1291,13 +1295,19 @@ fun BottomNavigationBar(
                         BottomTab.Joined -> AppRoutes.TRAVEL_PROPOSAL_JOINED
                         BottomTab.Profile -> AppRoutes.userProfile(currentUserId, isOwnProfile = true)
                     }
-                    navController.navigate(route) {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
+
+                    val finalNavigation: () -> Unit = {
+                        onTabSelected(tab)
+                        navController.navigate(route) {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
+
+                    navigateAwayAction?.invoke(finalNavigation) ?: finalNavigation()
                 },
                 icon = {
                     Icon(

@@ -82,6 +82,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -89,6 +90,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -113,6 +115,7 @@ import coil.request.ImageRequest
 import com.example.travelsharingapp.data.model.ItineraryStop
 import com.example.travelsharingapp.data.model.Typology
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
+import com.example.travelsharingapp.ui.screens.user_profile.BackHandler
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
 import com.example.travelsharingapp.ui.theme.customColorsPalette
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
@@ -163,7 +166,44 @@ fun TravelProposalManageScreen(
     val currentUser by userViewModel.selectedUserProfile.collectAsState()
     val currentUserProfile = currentUser!!
 
-    //Reset fields only when create a new Travel Proposal
+    val hasUnsavedChanges by proposalViewModel.hasUnsavedChanges.collectAsState()
+    var showNavigateAwayDialog by rememberSaveable { mutableStateOf(false) }
+
+    var pendingNavigation by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val navigationActionWithDialog = { onConfirmedNavigation: () -> Unit ->
+        if (hasUnsavedChanges) {
+            pendingNavigation = onConfirmedNavigation
+            showNavigateAwayDialog = true
+        } else {
+            onConfirmedNavigation()
+        }
+    }
+
+    DisposableEffect(hasUnsavedChanges) {
+        topBarViewModel.setNavigateAwayAction(navigationActionWithDialog)
+        onDispose { topBarViewModel.setNavigateAwayAction(null) }
+    }
+
+    BackHandler(enabled = true) { navigationActionWithDialog { onBack() } }
+
+    if (showNavigateAwayDialog) {
+        AlertDialog(
+            onDismissRequest = { showNavigateAwayDialog = false },
+            title = { Text("Discard Changes?") },
+            text = { Text("If you navigate away, the changes you've made will be lost.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showNavigateAwayDialog = false
+                    proposalViewModel.resetUnsavedChangesFlag()
+                    pendingNavigation?.invoke()
+                }) { Text("Discard") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNavigateAwayDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
     proposalViewModel.resetErrors()
 
     if (isDuplicatingProposal) {
@@ -187,7 +227,7 @@ fun TravelProposalManageScreen(
             title = if (isEditingProposal) "Edit Travel Proposal" else "New Travel Proposal",
             navigationIcon = {
                 if (isEditingProposal || isDuplicatingProposal) {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { navigationActionWithDialog { onBack() } }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
@@ -206,8 +246,7 @@ fun TravelProposalManageScreen(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Save,
-                        contentDescription = "Save",
-                        tint = if (proposalViewModel.hasErrors()) Color.Gray else Color.White
+                        contentDescription = "Save"
                     )
                 }
             }
@@ -232,7 +271,9 @@ fun TravelProposalManageScreen(
 
             Box(modifier = Modifier.weight(0.45f)) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize().padding(end = 16.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(end = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
@@ -663,7 +704,9 @@ fun PriceRangeSelector(viewModel: TravelProposalViewModel) {
             },
             valueRange = 0f..10000f,
             steps = 0,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -858,7 +901,7 @@ fun AddNewElementToListTravel(
             label = { Text(label) },
             modifier = Modifier
                 .weight(1f)
-                .onFocusChanged{ focusState ->
+                .onFocusChanged { focusState ->
                     isFocused = focusState.isFocused
                 },
             singleLine = true,
@@ -1232,24 +1275,37 @@ fun ItinerarySection(
                                             .fillMaxWidth()
                                             .clickable {
                                                 val placeId = prediction.placeId
-                                                searchQuery = prediction.getFullText(null).toString()
+                                                searchQuery =
+                                                    prediction.getFullText(null).toString()
                                                 predictions.value = emptyList()
 
-                                                val placeFields = listOf(Field.LAT_LNG, Field.ADDRESS)
-                                                val request = FetchPlaceRequest.newInstance(placeId, placeFields)
+                                                val placeFields =
+                                                    listOf(Field.LAT_LNG, Field.ADDRESS)
+                                                val request = FetchPlaceRequest.newInstance(
+                                                    placeId,
+                                                    placeFields
+                                                )
 
                                                 coroutineScope.launch {
                                                     placesClient.fetchPlace(request)
                                                         .addOnSuccessListener { response ->
                                                             val placeResult = response.place
                                                             val fetchedLatLng = placeResult.location
-                                                            val fetchedAddress = placeResult.addressComponents?.toString()
+                                                            val fetchedAddress =
+                                                                placeResult.addressComponents?.toString()
 
-                                                            if(fetchedLatLng != null) {
+                                                            if (fetchedLatLng != null) {
                                                                 selectedLocation = fetchedLatLng
-                                                                cameraPositionState.position = CameraPosition.fromLatLngZoom(fetchedLatLng, 15f)
-                                                                addressDisplayString = fetchedAddress ?: "Address not found"
-                                                                searchQuery = fetchedAddress ?: searchQuery
+                                                                cameraPositionState.position =
+                                                                    CameraPosition.fromLatLngZoom(
+                                                                        fetchedLatLng,
+                                                                        15f
+                                                                    )
+                                                                addressDisplayString =
+                                                                    fetchedAddress
+                                                                        ?: "Address not found"
+                                                                searchQuery =
+                                                                    fetchedAddress ?: searchQuery
                                                             }
                                                         }
                                                 }
@@ -1330,7 +1386,9 @@ fun ItineraryList(
                     Row (
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(horizontal = 8.dp).padding(top = 8.dp)
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .padding(top = 8.dp)
                     ){
                         Text(
                             "${index+1}. " + itinerary.place,
@@ -1360,7 +1418,9 @@ fun ItineraryList(
                         itinerary.description,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp)
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .padding(bottom = 8.dp)
                     )
 
                     Row(
@@ -1435,7 +1495,9 @@ fun ImagePickerSection(
             items(imageUris) { image ->
                 ElevatedCard(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFDF4FF)),
-                    modifier = Modifier.height(200.dp).width(200.dp),
+                    modifier = Modifier
+                        .height(200.dp)
+                        .width(200.dp),
                     onClick = { }
                 ) {
                     Box {
