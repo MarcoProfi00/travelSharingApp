@@ -16,26 +16,35 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -58,10 +67,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -132,10 +144,13 @@ import com.example.travelsharingapp.ui.screens.user_review.UserReviewViewModel
 import com.example.travelsharingapp.ui.screens.user_review.UserReviewViewModelFactory
 import com.example.travelsharingapp.ui.theme.TravelProposalTheme
 import com.example.travelsharingapp.utils.LockScreenOrientation
+import com.example.travelsharingapp.utils.NetworkConnectivityObserver
+import com.example.travelsharingapp.utils.NetworkStatus
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -336,6 +351,10 @@ fun AppContent(
     onUserAuthenticatedAndNavigatedToMainHub: () -> Unit
 ) {
     val context = LocalContext.current
+    val connectivityObserver = remember { NetworkConnectivityObserver(context) }
+    val backOnlineTimerJob = remember { mutableStateOf<Job?>(null) }
+    var bannerState by remember { mutableStateOf<BannerState>(BannerState.Hidden) }
+    val scope = rememberCoroutineScope()
 
     if(!shouldUseTabletLayout())
         LockScreenOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
@@ -360,6 +379,32 @@ fun AppContent(
                 onAuthDeterminationComplete()
                 authDeterminationLatch = true
             }
+        }
+    }
+
+    LaunchedEffect(connectivityObserver) {
+        var previousStatus: NetworkStatus? = null
+        connectivityObserver.observe().collect { status ->
+            backOnlineTimerJob.value?.cancel()
+
+            if (status == NetworkStatus.Available) {
+                if (previousStatus != null && previousStatus != NetworkStatus.Available) {
+                    bannerState = BannerState.Visible(
+                        "Back online!",
+                        backgroundColor = Color(0xFF388E3C)
+                    )
+                    backOnlineTimerJob.value = scope.launch {
+                        delay(3000L)
+                        bannerState = BannerState.Hidden
+                    }
+                }
+            } else {
+                bannerState = BannerState.Visible(
+                    "You're currently offline. Some data may be outdated.",
+                    backgroundColor = Color.DarkGray
+                )
+            }
+            previousStatus = status
         }
     }
 
@@ -591,15 +636,32 @@ fun AppContent(
                 snackbarHost = { SnackbarHost(hostState = remember { SnackbarHostState() }) },
                 topBar = {
                     if (currentTopBarConfig.isVisible && authState is AuthState.Authenticated) {
-                        CenterAlignedTopAppBar(
-                            title = { Text(currentTopBarConfig.title) },
-                            navigationIcon = currentTopBarConfig.navigationIcon ?: {},
-                            actions = { currentTopBarConfig.actions?.invoke(this) },
-                            scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        Column {
+                            CenterAlignedTopAppBar(
+                                title = { Text(currentTopBarConfig.title) },
+                                navigationIcon = currentTopBarConfig.navigationIcon ?: {},
+                                actions = { currentTopBarConfig.actions?.invoke(this) },
+                                scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
+                                colors = TopAppBarDefaults.topAppBarColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                                )
                             )
-                        )
+
+                            AnimatedVisibility(
+                                visible = bannerState is BannerState.Visible,
+                                enter = slideInVertically(initialOffsetY = { -it }),
+                                exit = slideOutVertically(targetOffsetY = { -it })
+                            ) {
+                                if (bannerState is BannerState.Visible) {
+                                    val isOnline = (bannerState as BannerState.Visible).backgroundColor != Color.DarkGray
+                                    NetworkStatusBanner(
+                                        message = (bannerState as BannerState.Visible).message,
+                                        backgroundColor = (bannerState as BannerState.Visible).backgroundColor,
+                                        isOnline = isOnline
+                                    )
+                                }
+                            }
+                        }
                     }
                 },
                 floatingActionButton = {
@@ -1321,5 +1383,34 @@ fun BottomNavigationBar(
                 label = { Text(tab.name) }
             )
         }
+    }
+}
+
+sealed interface BannerState {
+    object Hidden : BannerState
+    data class Visible(val message: String, val backgroundColor: Color) : BannerState
+}
+
+@Composable
+fun NetworkStatusBanner(message: String, backgroundColor: Color, isOnline: Boolean) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor)
+            .padding(8.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = if (isOnline) Icons.Default.CloudDone else Icons.Default.CloudOff,
+            contentDescription = "Network Status",
+            tint = Color.White
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = message,
+            color = Color.White,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
