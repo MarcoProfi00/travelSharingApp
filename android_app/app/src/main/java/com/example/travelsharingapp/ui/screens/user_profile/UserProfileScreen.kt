@@ -108,7 +108,7 @@ fun UserProfileScreen(
 
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
-            title = "User Profile",
+            title = "Profile",
             navigationIcon = { /* nothing */},
             actions = {
                 if(isOwnProfile) {

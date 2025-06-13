@@ -133,7 +133,7 @@ fun TravelProposalJoinedScreen(
 
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
-            title = "Joined Proposals",
+            title = "Joined Travels",
             navigationIcon = { /* nothing */ },
             actions = {
                 IconButton(onClick = { onNavigateToChat() }) {

@@ -71,6 +71,7 @@ import com.example.travelsharingapp.data.model.ChatMessage
 import com.example.travelsharingapp.data.model.UserProfile
 import com.example.travelsharingapp.ui.screens.main.TopBarViewModel
 import com.example.travelsharingapp.ui.screens.travel_application.ProfileAvatar
+import com.example.travelsharingapp.ui.screens.travel_proposal.TravelProposalViewModel
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
@@ -87,10 +88,12 @@ fun ChatRoomScreen(
     chatViewModel: ChatViewModel,
     topBarViewModel: TopBarViewModel,
     userProfileViewModel: UserProfileViewModel,
+    proposalViewModel: TravelProposalViewModel,
     onNavigateBack: () -> Unit
 ) {
     val messages by chatViewModel.messages.collectAsState()
     val isLoadingMessages by chatViewModel.isLoading.collectAsState()
+    val observedProposal by proposalViewModel.selectedProposal.collectAsState()
 
     var newMessage by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -108,13 +111,14 @@ fun ChatRoomScreen(
     val listState = rememberLazyListState()
 
     LaunchedEffect(proposalId) {
+        proposalViewModel.setDetailProposalId(proposalId)
         chatViewModel.startListeningMessagesByProposalId(proposalId)
         chatViewModel.markMessagesAsRead(proposalId, userId)
     }
 
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
-            title = "Group Chat",
+            title = observedProposal?.name ?: "Group Chat",
             navigationIcon = {
                 IconButton(onClick = { onNavigateBack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

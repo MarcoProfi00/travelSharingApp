@@ -591,18 +591,15 @@ fun AppContent(
                 snackbarHost = { SnackbarHost(hostState = remember { SnackbarHostState() }) },
                 topBar = {
                     if (currentTopBarConfig.isVisible && authState is AuthState.Authenticated) {
-                        Column {
-                            CenterAlignedTopAppBar(
-                                title = { Text(currentTopBarConfig.title) },
-                                navigationIcon = currentTopBarConfig.navigationIcon ?: {},
-                                actions = { currentTopBarConfig.actions?.invoke(this) },
-                                scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
+                        CenterAlignedTopAppBar(
+                            title = { Text(currentTopBarConfig.title) },
+                            navigationIcon = currentTopBarConfig.navigationIcon ?: {},
+                            actions = { currentTopBarConfig.actions?.invoke(this) },
+                            scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer
                             )
-                            HorizontalDivider(
-                                thickness = 1.dp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                            )
-                        }
+                        )
                     }
                 },
                 floatingActionButton = {
@@ -1244,6 +1241,7 @@ fun AppContent(
                                 chatViewModel = chatViewModel,
                                 topBarViewModel = topBarViewModel,
                                 userProfileViewModel = userProfileViewModel,
+                                proposalViewModel = travelProposalViewModel,
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }

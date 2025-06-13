@@ -314,7 +314,7 @@ fun TravelProposalListScreen(
 
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
-            title = "All Travel Proposals",
+            title = "ToTravel",
             navigationIcon = { /* nothing */ },
             actions = {
                 IconButton(onClick = { onNavigateToChat() }) {

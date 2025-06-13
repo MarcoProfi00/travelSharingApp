@@ -750,7 +750,7 @@ class TravelProposalViewModel(
     val filteredProposals: StateFlow<List<TravelProposal>> = ownedProposals
         .combine(statusFilter) { proposals, statuses ->
             proposals.filter { proposal ->
-                statuses.isEmpty() || statuses.contains(proposal.status)
+                statuses.contains(proposal.status)
             }.sortedByDescending { it.startDate }
         }
         .flowOn(Dispatchers.Default)

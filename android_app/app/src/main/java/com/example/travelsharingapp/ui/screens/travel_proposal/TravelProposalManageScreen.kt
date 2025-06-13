@@ -224,7 +224,7 @@ fun TravelProposalManageScreen(
 
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
-            title = if (isEditingProposal) "Edit Travel Proposal" else "New Travel Proposal",
+            title = if (isEditingProposal || isDuplicatingProposal) "Edit Travel" else "New Travel",
             navigationIcon = {
                 if (isEditingProposal || isDuplicatingProposal) {
                     IconButton(onClick = { navigationActionWithDialog { onBack() } }) {

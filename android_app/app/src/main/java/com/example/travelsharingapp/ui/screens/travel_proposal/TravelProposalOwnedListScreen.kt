@@ -4,7 +4,6 @@ import android.content.res.Configuration
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -98,13 +97,9 @@ fun TravelProposalOwnedListScreen(
         viewModel.startListeningOwnedProposals(userId)
     }
 
-    val filteredProposals = ownedProposals.filter { proposal ->
-        statusFilter.contains(proposal.status)
-    }.sortedByDescending { it.startDate }
-
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(
-            title = "My Travel Proposals",
+            title = "My Travels",
             navigationIcon = { /* nothing */ },
             actions = {
                 IconButton(onClick = { navController.navigate(AppRoutes.CHAT_LIST) }) {
@@ -129,142 +124,152 @@ fun TravelProposalOwnedListScreen(
             }
         )
 
-        if (ownedProposals.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("You have not created any proposal")
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(numColumns),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(bottom = 16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Text(
+                        text = "Open",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.height(12.dp),
+                        color = MaterialTheme.colorScheme.outline,
+                        thickness = 1.dp
+                    )
+                }
             }
-        } else if (filteredProposals.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No proposals match selected status.")
-            }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(numColumns),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
-            ) {
+
+            if (openProposals.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Text(
-                            text = "Open",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 4.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.EventBusy,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(40.dp)
                         )
-                        HorizontalDivider(
-                            modifier = Modifier.height(12.dp),
-                            color = MaterialTheme.colorScheme.outline,
-                            thickness = 1.dp
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "No new travels " + if (!(statusFilter.contains(ProposalStatus.Published.name) || statusFilter.contains(ProposalStatus.Full.name))) "match selection." else "yet.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.outline
                         )
                     }
                 }
+            }
 
-                items(
-                    count = openProposals.size,
-                    key = { index -> openProposals[index].proposalId },
-                    contentType = { "OwnedTravelProposalCard" },
-                    itemContent = { index ->
-                        val ownedProposal = openProposals[index]
-                        val count = unreadCounts[ownedProposal.proposalId] ?: 0
-                        OwnedTravelProposalCard(
-                            ownedProposal = ownedProposal,
-                            isOwner = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            unreadCount = count,
-                            onClick = {
-                                navController.navigate(AppRoutes.travelProposalInfo(ownedProposal.proposalId))
-                            },
-                            onPendingApplicationsClick = {
-                                navController.navigate(AppRoutes.manageApplications(ownedProposal.proposalId))
-                            },
-                            onViewReviewsClick = {
-                                navController.navigate(AppRoutes.reviewViewAllScreen(ownedProposal.proposalId))
-                            },
-                            onNavigateToChatRoom = {
-                                navController.navigate(AppRoutes.chatRoom(ownedProposal.proposalId))
-                            }
-                        )
-                    }
-                )
-
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Column(modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 12.dp)) {
-                        Text(
-                            text = "Concluded",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.height(12.dp),
-                            color = MaterialTheme.colorScheme.outline,
-                            thickness = 1.dp
-                        )
-                    }
-                }
-                if (concludedProposals.isEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.EventBusy,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(40.dp)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "No concluded proposals yet.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.outline
-                            )
+            items(
+                count = openProposals.size,
+                key = { index -> openProposals[index].proposalId },
+                contentType = { "OwnedTravelProposalCard" },
+                itemContent = { index ->
+                    val ownedProposal = openProposals[index]
+                    val count = unreadCounts[ownedProposal.proposalId] ?: 0
+                    OwnedTravelProposalCard(
+                        ownedProposal = ownedProposal,
+                        isOwner = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        unreadCount = count,
+                        onClick = {
+                            navController.navigate(AppRoutes.travelProposalInfo(ownedProposal.proposalId))
+                        },
+                        onPendingApplicationsClick = {
+                            navController.navigate(AppRoutes.manageApplications(ownedProposal.proposalId))
+                        },
+                        onViewReviewsClick = {
+                            navController.navigate(AppRoutes.reviewViewAllScreen(ownedProposal.proposalId))
+                        },
+                        onNavigateToChatRoom = {
+                            navController.navigate(AppRoutes.chatRoom(ownedProposal.proposalId))
                         }
-                    }
+                    )
                 }
-                items(
-                    count = concludedProposals.size,
-                    key = { index -> concludedProposals[index].proposalId },
-                    contentType = { "OwnedTravelProposalCard" },
-                    itemContent = { index ->
-                        val ownedProposal = concludedProposals[index]
-                        val count = unreadCounts[ownedProposal.proposalId] ?: 0
-                        OwnedTravelProposalCard(
-                            ownedProposal = ownedProposal,
-                            isOwner = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            unreadCount = count,
-                            onClick = {
-                                navController.navigate(AppRoutes.travelProposalInfo(ownedProposal.proposalId))
-                            },
-                            onPendingApplicationsClick = {
-                                navController.navigate(AppRoutes.manageApplications(ownedProposal.proposalId))
-                            },
-                            onViewReviewsClick = {
-                                navController.navigate(AppRoutes.reviewViewAllScreen(ownedProposal.proposalId))
-                            },
-                            onNavigateToChatRoom = {
-                                navController.navigate(AppRoutes.chatRoom(ownedProposal.proposalId))
-                            }
+            )
+
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 12.dp)) {
+                    Text(
+                        text = "Concluded",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.height(12.dp),
+                        color = MaterialTheme.colorScheme.outline,
+                        thickness = 1.dp
+                    )
+                }
+            }
+
+            if (concludedProposals.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.EventBusy,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.size(40.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "No concluded travels " + if (!(statusFilter.contains(ProposalStatus.Concluded.name))) "match selection." else "yet.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.outline
                         )
                     }
-                )
+                }
             }
+
+            items(
+                count = concludedProposals.size,
+                key = { index -> concludedProposals[index].proposalId },
+                contentType = { "OwnedTravelProposalCard" },
+                itemContent = { index ->
+                    val ownedProposal = concludedProposals[index]
+                    val count = unreadCounts[ownedProposal.proposalId] ?: 0
+                    OwnedTravelProposalCard(
+                        ownedProposal = ownedProposal,
+                        isOwner = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        unreadCount = count,
+                        onClick = {
+                            navController.navigate(AppRoutes.travelProposalInfo(ownedProposal.proposalId))
+                        },
+                        onPendingApplicationsClick = {
+                            navController.navigate(AppRoutes.manageApplications(ownedProposal.proposalId))
+                        },
+                        onViewReviewsClick = {
+                            navController.navigate(AppRoutes.reviewViewAllScreen(ownedProposal.proposalId))
+                        },
+                        onNavigateToChatRoom = {
+                            navController.navigate(AppRoutes.chatRoom(ownedProposal.proposalId))
+                        }
+                    )
+                }
+            )
         }
     }
 }
