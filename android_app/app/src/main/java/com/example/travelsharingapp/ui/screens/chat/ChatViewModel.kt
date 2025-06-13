@@ -101,6 +101,23 @@ class ChatViewModel(
             chatRepository.updateLastReadTimestamp(proposalId, userId)
         }
     }
+
+    fun clearMessagesData() {
+        messagesListenerJob?.cancel()
+        unreadCountJobs.forEach {
+            it.value.cancel()
+        }
+
+        _messages.value = emptyList()
+        _unreadMessagesCount.value = emptyMap<String, Int>()
+        _messageToEdit.value = null
+        _isLoading.value = false
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        clearMessagesData()
+    }
 }
 
 class ChatViewModelFactory(

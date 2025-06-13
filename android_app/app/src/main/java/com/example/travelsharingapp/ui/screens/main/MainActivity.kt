@@ -314,7 +314,6 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-
                 }
             }
         }
@@ -409,6 +408,7 @@ fun AppContent(
         travelReviewViewModel.clearTravelReviewData()
         userReviewViewModel.clearUserReviewData()
         notificationsViewModel.clearNotificationData()
+        chatViewModel.clearMessagesData()
     }
 
     val firebaseAuth = FirebaseAuth.getInstance()

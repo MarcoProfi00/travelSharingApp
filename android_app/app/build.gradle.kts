@@ -1,3 +1,4 @@
+import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
 import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.util.Properties
@@ -26,9 +27,9 @@ plugins {
 
     id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
     id("com.google.gms.google-services")
+    id("com.google.firebase.firebase-perf")
+    id("com.google.firebase.crashlytics")
 }
-
-
 
 android {
     namespace = "com.example.travelsharingapp"
@@ -66,6 +67,9 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("release")
+            configure<CrashlyticsExtension> {
+                nativeSymbolUploadEnabled = true
+            }
         }
 
         debug {
@@ -135,6 +139,9 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.firebase.database)
     implementation(libs.firebase.messaging.ktx)
+    implementation(libs.firebase.perf)
+    implementation(libs.firebase.crashlytics.ndk)
+    implementation(libs.google.firebase.analytics)
 
     implementation(libs.integrity)
 
@@ -157,4 +164,15 @@ dependencies {
 secrets {
     propertiesFileName = "secrets.properties"
     defaultPropertiesFileName = "local.defaults.properties"
+}
+
+android.applicationVariants.all {
+    if (this.buildType.name == "release") {
+        val variantName = this.name.replaceFirstChar { it.uppercase() }
+        if (project.tasks.findByName("uploadCrashlyticsSymbolFile$variantName") != null) {
+            tasks.named("assemble$variantName").configure {
+                finalizedBy(tasks.named("uploadCrashlyticsSymbolFile$variantName"))
+            }
+        }
+    }
 }
