@@ -1035,7 +1035,6 @@ fun ProposalStatusCard(
                         )
                     }
                 }
-
             } else {
                 val application = applications.find { it.userId == userId }
                 if (application != null) {
@@ -1078,6 +1077,12 @@ fun ProposalStatusCard(
                                 }
                             } else if (application.statusEnum == ApplicationStatus.Rejected) {
                                 Text("Your application was not accepted.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth())
+                            } else if (application.statusEnum == ApplicationStatus.Cancelled) {
+                                if (proposal.statusEnum == ProposalStatus.Full) {
+                                    Text("This trip is full.", color = MaterialTheme.colorScheme.error)
+                                } else {
+                                    Text("Your application was cancelled.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth())
+                                }
                             }
                         }
                     }

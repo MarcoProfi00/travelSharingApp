@@ -6,7 +6,8 @@ import com.google.firebase.firestore.Exclude
 enum class ApplicationStatus {
     Pending,
     Accepted,
-    Rejected
+    Rejected,
+    Cancelled
 }
 
 data class GuestApplicant(

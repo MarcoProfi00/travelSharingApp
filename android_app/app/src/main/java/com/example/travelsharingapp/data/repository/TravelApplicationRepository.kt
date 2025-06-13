@@ -6,6 +6,7 @@ import com.example.travelsharingapp.data.model.TravelProposal
 import com.example.travelsharingapp.utils.toApplicationStatusOrNull
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
@@ -69,29 +70,57 @@ class TravelApplicationRepository() {
     suspend fun acceptApplication(application: TravelApplication) {
         if (application.status.toApplicationStatusOrNull() == ApplicationStatus.Accepted) return
 
+        val proposalRef = proposalsCollection.document(application.proposalId)
+
+        val travelProposal = proposalRef.get().await().toObject(TravelProposal::class.java)
+            ?: throw IllegalStateException("Travel proposal with ID ${application.proposalId} not found.")
+
+        val allPendingApplications = applicationsCollection
+            .whereEqualTo("proposalId", application.proposalId)
+            .whereEqualTo("status", ApplicationStatus.Pending.name)
+            .get()
+            .await()
+            .toObjects(TravelApplication::class.java)
+
+        val newParticipantsCount = travelProposal.participantsCount + 1 + application.accompanyingGuests.size
+        val isNowFull = newParticipantsCount >= travelProposal.maxParticipants
+
         db.runTransaction { transaction ->
+            val freshProposalSnapshot = transaction.get(proposalRef)
+            val freshTravelProposal = freshProposalSnapshot.toObject(TravelProposal::class.java)
+                ?: throw FirebaseFirestoreException(
+                    "Proposal not found during transaction.",
+                    FirebaseFirestoreException.Code.ABORTED
+                )
+
+            val expectedParticipantsCount = freshTravelProposal.participantsCount + 1 + application.accompanyingGuests.size
+            if (expectedParticipantsCount > freshTravelProposal.maxParticipants) {
+                throw FirebaseFirestoreException(
+                    "Proposal state changed, participant count would exceed max.",
+                    FirebaseFirestoreException.Code.ABORTED
+                )
+            }
+
             val applicationRef = applicationsCollection.document(application.applicationId)
-            val proposalRef = proposalsCollection.document(application.proposalId)
-
-            val travelProposalSnapshot = transaction.get(proposalRef)
-            val travelProposal = travelProposalSnapshot.toObject(TravelProposal::class.java)
-                ?: throw IllegalStateException("Travel proposal not found.")
-
             transaction.update(applicationRef, "status", ApplicationStatus.Accepted.name)
-
-            val newParticipantsCount = travelProposal.participantsCount + 1 + application.accompanyingGuests.size
-            val newPendingCount = if (application.status.toApplicationStatusOrNull() == ApplicationStatus.Pending) {
-                travelProposal.pendingApplicationsCount - 1
-            } else {
-                travelProposal.pendingApplicationsCount
-            }
-
             transaction.update(proposalRef, "participantsCount", newParticipantsCount)
-            transaction.update(proposalRef, "pendingApplicationsCount", newPendingCount)
 
-            if (newParticipantsCount >= travelProposal.maxParticipants) {
+            if (isNowFull) {
                 transaction.update(proposalRef, "status", "Full")
+                transaction.update(proposalRef, "pendingApplicationsCount", 0)
+
+                allPendingApplications.forEach { appToCancel ->
+                    if (appToCancel.applicationId != application.applicationId) {
+                        val appToCancelRef = applicationsCollection.document(appToCancel.applicationId)
+                        transaction.update(appToCancelRef, "status", ApplicationStatus.Cancelled.name)
+                    }
+                }
+            } else {
+                val newPendingCount = (freshTravelProposal.pendingApplicationsCount - 1).coerceAtLeast(0)
+                transaction.update(proposalRef, "pendingApplicationsCount", newPendingCount)
             }
+
+            null
         }.await()
     }
 

@@ -1224,6 +1224,7 @@ fun TravelProposalCard(
                                 ApplicationStatus.Accepted -> MaterialTheme.customColorsPalette.extraColorGreen
                                 ApplicationStatus.Pending -> MaterialTheme.customColorsPalette.extraColorOrange
                                 ApplicationStatus.Rejected -> MaterialTheme.customColorsPalette.extraColorRed
+                                ApplicationStatus.Cancelled -> MaterialTheme.customColorsPalette.extraColorRed
                             },
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold

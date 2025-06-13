@@ -283,7 +283,7 @@ fun JoinedTravelProposalCard(
                 val application = applications.find { it.proposalId == proposal.proposalId }
                 val applicationStatus = application?.statusEnum
 
-                if (applicationStatus != null) {
+                if (applicationStatus != null && isUpcoming) {
                     Box(
                         modifier = Modifier
                             .padding(8.dp)
@@ -298,6 +298,7 @@ fun JoinedTravelProposalCard(
                                 ApplicationStatus.Accepted -> MaterialTheme.customColorsPalette.extraColorGreen
                                 ApplicationStatus.Pending -> MaterialTheme.customColorsPalette.extraColorOrange
                                 ApplicationStatus.Rejected -> MaterialTheme.customColorsPalette.extraColorRed
+                                ApplicationStatus.Cancelled -> MaterialTheme.customColorsPalette.extraColorRed
                             },
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
@@ -359,16 +360,17 @@ fun JoinedTravelProposalCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AssistChip(
-                        onClick = { /* */ },
-                        label = { Text(travelStatus.displayText, style = MaterialTheme.typography.labelMedium) },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = travelStatus.getContainerColor(),
-                            labelColor = travelStatus.getLabelColor()
-                        ),
-                        border = null
-                    )
-
+                    if (isUpcoming && proposal.statusEnum != ProposalStatus.Concluded) {
+                        AssistChip(
+                            onClick = { /* */ },
+                            label = { Text(travelStatus.displayText, style = MaterialTheme.typography.labelMedium) },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = travelStatus.getContainerColor(),
+                                labelColor = travelStatus.getLabelColor()
+                            ),
+                            border = null
+                        )
+                    }
 
                     if (!isUpcoming && proposal.statusEnum == ProposalStatus.Concluded) {
                         Button(
