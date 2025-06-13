@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -73,7 +74,6 @@ import java.util.Locale
 @Composable
 fun TravelReviewViewAllScreen(
     modifier: Modifier,
-    userId: String,
     proposalId: String,
     travelProposalViewModel: TravelProposalViewModel,
     reviewViewModel: TravelReviewViewModel,
@@ -88,12 +88,19 @@ fun TravelReviewViewAllScreen(
     val observedUser by userProfileViewModel.selectedUserProfile.collectAsState()
     val observedProposal by travelProposalViewModel.selectedProposal.collectAsState()
     val allReviews by reviewViewModel.proposalSpecificReviews.collectAsState()
+    val isLoadingProposal by travelProposalViewModel.isLoading.collectAsState()
+    val currentTargetId by travelProposalViewModel.currentDetailProposalId.collectAsState()
 
     LaunchedEffect(proposalId) {
         travelProposalViewModel.setDetailProposalId(proposalId)
+        reviewViewModel.startListeningReviewsForProposal(proposalId)
     }
 
-    if (observedProposal == null) {
+    if (currentTargetId != proposalId) {
+        return
+    }
+
+    if (isLoadingProposal) {
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -107,150 +114,103 @@ fun TravelReviewViewAllScreen(
         return
     }
 
-    LaunchedEffect(proposalId) {
-        reviewViewModel.startListeningReviewsForProposal(proposalId)
+    if (observedProposal == null) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Proposal not found or an error occurred.")
+            Button(onClick = onBack) { Text("Go Back") }
+        }
+        return
+    }
+
+    val currentUser = observedUser!!
+    val currentProposal = observedProposal!!
+    val currentUserReview = allReviews.find { it.reviewerId == currentUser.userId }
+    val otherReviews = allReviews.filter { it.reviewerId != currentUser.userId }
+    val isOwner = currentProposal.organizerId == currentUser.userId
+
+    val totalReviews = allReviews.size
+    val averageRating = if (totalReviews > 0) allReviews.map { it.rating }.average() else 0.0
+    val ratingCounts = (1..5).associateWith { star ->
+        allReviews.count { it.rating == star.toFloat() }
     }
 
     val showDeleteDialog = remember { mutableStateOf(false) }
     val reviewIdToDelete = remember { mutableStateOf<String?>(null) }
 
-    val currentUser = observedUser!!
-
     val isTablet = shouldUseTabletLayout()
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val useSideBySideLayout = isTablet && isLandscape
 
-    val proposal by travelProposalViewModel.selectedProposal.collectAsState()
-    if (proposal == null) {
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-    } else {
-        val currentProposal = proposal!!
-        val currentUserReview = allReviews.find { it.reviewerId == currentUser.userId }
-        val otherReviews = allReviews.filter { it.reviewerId != currentUser.userId }
-        val isOwner = currentProposal.organizerId == currentUser.userId
-
-        val totalReviews = allReviews.size
-        val averageRating = if (totalReviews > 0) allReviews.map { it.rating }.average() else 0.0
-        val ratingCounts = (1..5).associateWith { star ->
-            allReviews.count { it.rating == star.toFloat() }
-        }
-
-        LaunchedEffect(Unit, currentUserReview) {
-            topBarViewModel.setConfig(
-                title = "Reviews for ${currentProposal.name}",
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    //No specific actions for this screen
-                },
-                floatingActionButton = {
-                    if (!isOwner && currentUserReview == null) {
-                        FloatingActionButton(
-                            onClick = { onAddReview() }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Add,
-                                contentDescription = "Add a review"
-                            )
-                        }
+    LaunchedEffect(Unit, currentUserReview) {
+        topBarViewModel.setConfig(
+            title = "Reviews for ${currentProposal.name}",
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            },
+            actions = { /* */ },
+            floatingActionButton = {
+                if (!isOwner && currentUserReview == null) {
+                    FloatingActionButton(
+                        onClick = { onAddReview() }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = "Add a review"
+                        )
                     }
                 }
+            }
+        )
+    }
+
+    if (allReviews.isEmpty()) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "There are no reviews for this trip yet." + if (!isOwner) "\nPress the '+' button to add one!" else "",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(24.dp)
             )
         }
-
-        if (allReviews.isEmpty()) {
-            Box(
+    } else {
+        if (useSideBySideLayout) {
+            Row(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(16.dp),
-                contentAlignment = Alignment.Center
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "There are no reviews for this trip yet." + if (!isOwner) "\nPress the '+' button to add one!" else "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(24.dp)
-                )
-            }
-        } else {
-            if (useSideBySideLayout) {
-                Row(
-                    modifier = modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                Box(
+                    modifier = Modifier
+                        .weight(0.4f)
+                        .fillMaxHeight()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(0.4f)
-                            .fillMaxHeight()
-                    ) {
-                        ReviewSummary(
-                            averageRating = averageRating,
-                            totalReviews = totalReviews,
-                            ratingCounts = ratingCounts
-                        )
-                    }
-
-                    LazyColumn(
-                        modifier = Modifier.weight(0.6f),
-                        contentPadding = PaddingValues(bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        currentUserReview?.let { review ->
-                            item {
-                                ReviewCard(
-                                    review = review,
-                                    user = currentUser,
-                                    ownReview = true,
-                                    onEdit = { onEditReview() },
-                                    onDelete = {
-                                        reviewIdToDelete.value = review.reviewId
-                                        showDeleteDialog.value = true
-                                    },
-                                    onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
-                                )
-                            }
-                        }
-                        itemsIndexed(otherReviews) { index, review ->
-                            val user by userProfileViewModel.observeUserProfileById(review.reviewerId)
-                                .collectAsState(initial = null)
-                            if (user != null) {
-                                ReviewCard(
-                                    index = index,
-                                    review = review,
-                                    user = user!!,
-                                    ownReview = false,
-                                    onEdit = { /**/ },
-                                    onDelete = { /**/ },
-                                    onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
-                                )
-                            }
-                        }
-                    }
+                    ReviewSummary(
+                        averageRating = averageRating,
+                        totalReviews = totalReviews,
+                        ratingCounts = ratingCounts
+                    )
                 }
-            } else {
+
                 LazyColumn(
-                    modifier = modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
+                    modifier = Modifier.weight(0.6f),
                     contentPadding = PaddingValues(bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    item {
-                        ReviewSummary(
-                            averageRating = averageRating,
-                            totalReviews = totalReviews,
-                            ratingCounts = ratingCounts
-                        )
-                    }
-
                     currentUserReview?.let { review ->
                         item {
                             ReviewCard(
@@ -266,13 +226,11 @@ fun TravelReviewViewAllScreen(
                             )
                         }
                     }
-
                     itemsIndexed(otherReviews) { index, review ->
                         val user by userProfileViewModel.observeUserProfileById(review.reviewerId)
                             .collectAsState(initial = null)
                         if (user != null) {
                             ReviewCard(
-                                index = index,
                                 review = review,
                                 user = user!!,
                                 ownReview = false,
@@ -284,30 +242,77 @@ fun TravelReviewViewAllScreen(
                     }
                 }
             }
-        }
+        } else {
+            LazyColumn(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                contentPadding = PaddingValues(bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    ReviewSummary(
+                        averageRating = averageRating,
+                        totalReviews = totalReviews,
+                        ratingCounts = ratingCounts
+                    )
+                }
 
-        if (showDeleteDialog.value && reviewIdToDelete.value != null) {
-            AlertDialog(
-                onDismissRequest = { showDeleteDialog.value = false },
-                confirmButton = {
-                    TextButton(onClick = {
-                        onDeleteReview(reviewIdToDelete.value!!)
-                        showDeleteDialog.value = false
-                    }) {
-                        Text("Confirm")
+                currentUserReview?.let { review ->
+                    item {
+                        ReviewCard(
+                            review = review,
+                            user = currentUser,
+                            ownReview = true,
+                            onEdit = { onEditReview() },
+                            onDelete = {
+                                reviewIdToDelete.value = review.reviewId
+                                showDeleteDialog.value = true
+                            },
+                            onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
+                        )
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = {
-                        showDeleteDialog.value = false
-                    }) {
-                        Text("Back")
+                }
+
+                itemsIndexed(otherReviews) { index, review ->
+                    val user by userProfileViewModel.observeUserProfileById(review.reviewerId)
+                        .collectAsState(initial = null)
+                    if (user != null) {
+                        ReviewCard(
+                            review = review,
+                            user = user!!,
+                            ownReview = false,
+                            onEdit = { /**/ },
+                            onDelete = { /**/ },
+                            onNavigateToUserProfileInfo = onNavigateToUserProfileInfo
+                        )
                     }
-                },
-                title = { Text("Delete review") },
-                text = { Text("Are you sure you want to delete this review?") }
-            )
+                }
+            }
         }
+    }
+
+    if (showDeleteDialog.value && reviewIdToDelete.value != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog.value = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteReview(reviewIdToDelete.value!!)
+                    showDeleteDialog.value = false
+                }) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteDialog.value = false
+                }) {
+                    Text("Back")
+                }
+            },
+            title = { Text("Delete review") },
+            text = { Text("Are you sure you want to delete this review?") }
+        )
     }
 }
 
@@ -408,7 +413,6 @@ fun ReviewSummary(
 
 @Composable
 fun ReviewCard(
-    index: Int = -1,
     review: TravelProposalReview,
     user: UserProfile,
     ownReview: Boolean,

@@ -35,6 +35,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Photo
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -94,6 +95,46 @@ fun ChatRoomScreen(
     val messages by chatViewModel.messages.collectAsState()
     val isLoadingMessages by chatViewModel.isLoading.collectAsState()
     val observedProposal by proposalViewModel.selectedProposal.collectAsState()
+    val isLoadingProposal by proposalViewModel.isLoading.collectAsState()
+    val currentTargetId by proposalViewModel.currentDetailProposalId.collectAsState()
+
+    LaunchedEffect(proposalId) {
+        proposalViewModel.setDetailProposalId(proposalId)
+        chatViewModel.startListeningMessagesByProposalId(proposalId)
+        chatViewModel.markMessagesAsRead(proposalId, userId)
+    }
+
+    if (currentTargetId != proposalId) {
+        return
+    }
+
+    if (isLoadingProposal) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CircularProgressIndicator()
+            Text("Loading proposal data...")
+        }
+        return
+    }
+
+    if (observedProposal == null) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Proposal not found or an error occurred.")
+            Button(onClick = onNavigateBack) { Text("Go Back") }
+        }
+        return
+    }
 
     var newMessage by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -109,12 +150,6 @@ fun ChatRoomScreen(
     var replyTarget by remember { mutableStateOf<ChatMessage?>(null) }
 
     val listState = rememberLazyListState()
-
-    LaunchedEffect(proposalId) {
-        proposalViewModel.setDetailProposalId(proposalId)
-        chatViewModel.startListeningMessagesByProposalId(proposalId)
-        chatViewModel.markMessagesAsRead(proposalId, userId)
-    }
 
     LaunchedEffect(Unit) {
         topBarViewModel.setConfig(

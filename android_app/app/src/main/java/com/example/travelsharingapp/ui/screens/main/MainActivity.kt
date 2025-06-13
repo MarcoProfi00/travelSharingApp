@@ -821,7 +821,6 @@ fun AppContent(
                         currentUser?.let {
                             TravelReviewViewAllScreen(
                                 modifier = Modifier.padding(innerPadding),
-                                userId = currentUser.uid,
                                 proposalId = proposalId,
                                 travelProposalViewModel = travelProposalViewModel,
                                 reviewViewModel = travelReviewViewModel,

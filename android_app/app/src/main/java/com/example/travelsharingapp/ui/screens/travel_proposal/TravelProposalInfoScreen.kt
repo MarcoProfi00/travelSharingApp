@@ -140,7 +140,7 @@ fun TravelProposalInfoScreen(
         return
     }
 
-    if (isLoadingProposal && observedProposal == null) {
+    if (isLoadingProposal) {
         Column(
             modifier = modifier
                 .fillMaxSize()
