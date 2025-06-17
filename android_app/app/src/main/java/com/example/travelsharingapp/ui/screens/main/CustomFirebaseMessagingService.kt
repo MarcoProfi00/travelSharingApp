@@ -17,6 +17,7 @@ import com.example.travelsharingapp.R
 import com.example.travelsharingapp.data.model.NotificationType
 import com.example.travelsharingapp.data.repository.NotificationPreferenceKeys
 import com.example.travelsharingapp.data.repository.dataStoreInstance
+import com.example.travelsharingapp.ui.widget.UpdateWidgetWorker
 import com.example.travelsharingapp.utils.FcmTokenManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
@@ -109,6 +110,9 @@ class CustomFirebaseMessagingService: FirebaseMessagingService() {
             }
             NotificationType.TRAVEL_APPLICATION_ACCEPTED.key -> if (proposalId != null) {
                 deepLinkUriString = "myapp://travelsharingapp.example.com/travelProposalInfo/$proposalId"
+
+                // Also refresh widget
+                UpdateWidgetWorker.enqueueImmediateWidgetUpdate(applicationContext)
             }
             NotificationType.TRAVEL_APPLICATION_REJECTED.key -> if (proposalId != null) {
                 deepLinkUriString = "myapp://travelsharingapp.example.com/travelProposalInfo/$proposalId"

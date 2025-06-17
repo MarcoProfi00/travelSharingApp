@@ -125,6 +125,7 @@ class AuthViewModel(
                 setLocalProfileExistsFlag(user.uid, profileExists)
                 if (profileExists) {
                     _authState.value = AuthState.Authenticated(user)
+                    saveCurrentUserId(user.uid)
                 } else {
                     _authState.value = AuthState.ProfileSetupRequired(user)
                 }
@@ -549,6 +550,9 @@ class AuthViewModel(
         }
 
         clearAllSessionData()
+        viewModelScope.launch {
+            deleteCurrentUserId()
+        }
     }
 
     private fun performFirebaseSignOut(context: Context, signedOutUserId: String?, tokenWasHandled: Boolean) {
@@ -721,10 +725,23 @@ class AuthViewModel(
         }
     }
 
+    private suspend fun saveCurrentUserId(userId: String) {
+        if (userId.isBlank()) return
+        applicationContext.dataStoreInstance.edit { settings ->
+            settings[AuthPreferenceKeys.LOGGED_IN_USER_ID] = userId
+        }
+    }
+
     private suspend fun clearLocalProfileExistsFlag(userId: String) {
         if (userId.isBlank()) return
         applicationContext.dataStoreInstance.edit { settings ->
             settings.remove(AuthPreferenceKeys.profileExistsKey(userId))
+        }
+    }
+
+    private suspend fun deleteCurrentUserId() {
+        applicationContext.dataStoreInstance.edit { settings ->
+            settings.remove(AuthPreferenceKeys.LOGGED_IN_USER_ID)
         }
     }
 }

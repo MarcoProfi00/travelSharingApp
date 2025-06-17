@@ -2,4 +2,5 @@
 <resources>
     <string name="default_notification_channel_id">toTravel_default_channel</string>
     <string name="app_name">ToTravel</string>
+    <string name="travel_widget_description">View the upcoming travel for which the application has been accepted</string>
 </resources>

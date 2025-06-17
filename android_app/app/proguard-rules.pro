@@ -19,3 +19,5 @@
 
 # Keep all classes and their members in the data model package
 -keep class com.example.travelsharingapp.data.model.** { *; }
+
+-keep class com.example.travelsharingapp.ui.widget.WidgetTravelInfo { *; }
