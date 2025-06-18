@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.travelsharingapp.data.model.ApplicationStatus
@@ -211,18 +212,21 @@ fun ChatListScreen(
                                             .fillMaxSize()
                                             .padding(vertical = 16.dp)
                                     ) {
-                                        Row {
+                                        Box {
                                             Text(
                                                 text = proposal.name,
                                                 style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.onSurface
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.align(Alignment.TopStart)
                                             )
-                                            Spacer(modifier = Modifier.weight(1f))
 
                                             val count = unreadCounts[proposal.proposalId] ?: 0
                                             if (count > 0) {
                                                 Badge(
                                                     containerColor = MaterialTheme.colorScheme.error,
+                                                    modifier = Modifier.align(Alignment.TopEnd)
                                                 ) {
                                                     Text(
                                                         text = count.toString(),
