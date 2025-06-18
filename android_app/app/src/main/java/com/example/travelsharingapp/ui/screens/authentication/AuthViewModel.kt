@@ -21,6 +21,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.travelsharingapp.data.repository.AuthPreferenceKeys
 import com.example.travelsharingapp.data.repository.UserRepository
 import com.example.travelsharingapp.data.repository.dataStoreInstance
+import com.example.travelsharingapp.ui.widget.UpdateWidgetWorker
 import com.example.travelsharingapp.utils.FcmTokenManager
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
@@ -552,6 +553,9 @@ class AuthViewModel(
         clearAllSessionData()
         viewModelScope.launch {
             deleteCurrentUserId()
+
+            // Also refresh widget
+            UpdateWidgetWorker.enqueueImmediateWidgetUpdate(context)
         }
     }
 
