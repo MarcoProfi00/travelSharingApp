@@ -1,5 +1,7 @@
 package com.example.travelsharingapp.ui.screens.chat
 
+import androidx.compose.foundation.MarqueeAnimationMode
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -219,7 +221,9 @@ fun ChatListScreen(
                                                 color = MaterialTheme.colorScheme.onSurface,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.align(Alignment.TopStart)
+                                                modifier = Modifier
+                                                    .align(Alignment.TopStart)
+                                                    .basicMarquee(animationMode = MarqueeAnimationMode.Immediately)
                                             )
 
                                             val count = unreadCounts[proposal.proposalId] ?: 0

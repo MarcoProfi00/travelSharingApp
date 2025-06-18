@@ -90,6 +90,7 @@ import com.example.travelsharingapp.ui.screens.travel_application.TravelApplicat
 import com.example.travelsharingapp.ui.screens.travel_review.TravelReviewViewModel
 import com.example.travelsharingapp.ui.screens.user_profile.UserProfileViewModel
 import com.example.travelsharingapp.ui.theme.customColorsPalette
+import com.example.travelsharingapp.ui.widget.UpdateWidgetWorker
 import com.example.travelsharingapp.utils.shouldUseTabletLayout
 import com.example.travelsharingapp.utils.toTypologyOrNull
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -126,6 +127,8 @@ fun TravelProposalInfoScreen(
     onNavigateToUserProfile: (String) -> Unit,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
+
     val observedProposal by proposalViewModel.selectedProposal.collectAsState()
     val applications by applicationViewModel.proposalSpecificApplications.collectAsState()
     val isLoadingProposal by proposalViewModel.isLoading.collectAsState()
@@ -512,6 +515,9 @@ fun TravelProposalInfoScreen(
                     isWithdrawing = true
                     showWithdrawDialog.value = false
                     applicationViewModel.withdrawApplication(userId, proposal.proposalId)
+
+                    // Also refresh widget
+                    UpdateWidgetWorker.enqueueImmediateWidgetUpdate(context)
                 }) { Text("Confirm") } },
             dismissButton = {
                 TextButton(onClick = {
